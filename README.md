@@ -1,83 +1,30 @@
-## AVD Clientive — Small Business CRM
+# Small business CRM features
 
-Lightweight CRM built with Next.js 15, React 19, Tailwind CSS, and Supabase. Includes clients, orders, and tasks with email support contact.
+*Automatically synced with your [v0.app](https://v0.app) deployments*
 
-### Features
-- Clients, tasks, and orders CRUD (Supabase)
-- Auth via Supabase (email/password)
-- Dashboard with filters and quick actions
-- Support contact form (Resend)
+[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features)
+[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/CLbAi3NYDFs)
 
-### Requirements
-- Node.js 20+ recommended (works on 18 but deprecated by @supabase/supabase-js)
-- pnpm (or npm/yarn)
-- Supabase project (free tier is fine)
-- Optional: Resend account for email
+## Overview
 
-### Quick start
-1) Install
+This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
+Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
 
-```bash
-pnpm install
-```
+## Deployment
 
-2) Configure environment
+Your project is live at:
 
-Create `.env.local` at the repo root:
+**[https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features](https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features)**
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE=your_supabase_service_role_key
+## Build your app
 
-# Support email (Resend)
-RESEND_API_KEY=your_resend_api_key
-SUPPORT_INBOX_EMAIL=villamdomum@gmail.com
-# Optional: set a verified sender in Resend (recommended)
-RESEND_FROM=support@yourdomain.com
+Continue building your app on:
 
-# Optional
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-```
+**[https://v0.app/chat/projects/CLbAi3NYDFs](https://v0.app/chat/projects/CLbAi3NYDFs)**
 
-3) Create database tables in Supabase
+## How It Works
 
-- Open Supabase SQL Editor and run the scripts in `scripts/sql/` in order:
-  - `001_create_tables.sql`
-  - `002_add_email_notify.sql` (adds task email notification flag)
-
-4) Run the app
-
-```bash
-pnpm dev
-# Local: http://localhost:3000
-```
-
-### Health checks
-- `GET /api/integrations/health` — verifies Supabase and optional services
-- `GET /api/supabase/health` — basic Supabase env presence
-
-### Support contact (email)
-- Endpoint: `POST /api/support`
-- Requires `RESEND_API_KEY` and `SUPPORT_INBOX_EMAIL`.
-- Optional: `RESEND_FROM` set to a verified sender in Resend for best deliverability.
-
-### Production build
-
-```bash
-pnpm build
-pnpm start
-```
-
-### Deployment
-- Vercel recommended. Set the same environment variables in your Vercel project.
-- Ensure Node.js 20+ runtime for best compatibility with Supabase SDK.
-
-### Tech stack
-- Next.js 15 (App Router)
-- React 19
-- Tailwind CSS
-- Supabase (Postgres + Auth)
-- Resend (email)
-
+1. Create and modify your project using [v0.dev](https://v0.dev)
+2. Deploy your chats from the v0 interface
+3. Changes are automatically pushed to this repository
+4. Vercel deploys the latest version from this repository
