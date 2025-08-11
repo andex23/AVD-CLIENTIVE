@@ -37,12 +37,12 @@ export default function HomePage() {
 
       {/* Hero */}
       <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-b from-orange-50/60 to-white dark:from-orange-900/10 dark:to-neutral-950">
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-24">
+        <div className="mx-auto max-w-6xl px-4 py-16 md:py-24 font-mono">
           <div className="max-w-3xl">
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">
               Manage Clients, Tasks, and Orders in One Place
             </h1>
-            <p className="mt-4 text-slate-600 dark:text-slate-300">
+            <p className="mt-4 text-slate-600 dark:text-slate-300 font-mono">
               A lightweight CRM to keep your relationships warm and your follow-ups on time. Fully responsive and easy
               to use.
             </p>
@@ -59,7 +59,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Summary */}
-      <section className="mx-auto max-w-6xl px-4 py-12 md:py-16">
+      <section className="mx-auto max-w-6xl px-4 py-12 md:py-16 font-mono">
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Card className="p-6 border-slate-200 dark:border-slate-800">
             <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-neutral-900 dark:text-white">

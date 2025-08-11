@@ -5,7 +5,7 @@ export function SiteFooter() {
   return (
     <footer className="w-full border-t border-neutral-200/80 bg-white dark:border-neutral-800 dark:bg-neutral-950">
       <div className="mx-auto max-w-6xl px-4">
-        <div className="flex h-16 items-center justify-between gap-4">
+        <div className="flex h-16 items-center justify-between gap-4 font-mono">
           {/* Left: AVD logo in orange circle */}
           <Link href="/" aria-label="AVD Clientive Home" className="flex items-center gap-2">
             <span
