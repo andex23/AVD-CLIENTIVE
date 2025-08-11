@@ -91,9 +91,10 @@ export async function GET() {
   }
 
   const payload: HealthPayload = {
+    // Overall OK should reflect core functionality (Supabase + optional services present if configured).
+    // Neon is optional; if configured but failing, we still report its status but do not fail overall OK.
     ok:
       Boolean(supabaseUrl && supabaseAnon && supabaseServiceRole && canQuery) &&
-      (!pgUrl || neon.ok) &&
       upstashSearch.ok &&
       resend.ok,
     supabase: {
