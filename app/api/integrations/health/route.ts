@@ -55,9 +55,11 @@ export async function GET() {
     }
   }
 
-  // Neon (optional)
-  const pgUrl =
-    process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || ""
+  // Neon (optional, disabled by default unless ENABLE_NEON_HEALTH="true")
+  const enableNeon = process.env.ENABLE_NEON_HEALTH === "true"
+  const pgUrl = enableNeon
+    ? process.env.POSTGRES_PRISMA_URL || process.env.POSTGRES_URL_NON_POOLING || process.env.POSTGRES_URL || ""
+    : ""
   const neon: CheckResult = { present: Boolean(pgUrl), ok: false }
   if (pgUrl) {
     try {
