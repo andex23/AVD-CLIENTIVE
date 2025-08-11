@@ -15,13 +15,28 @@ function toOrder(row: any): Order {
   }
 }
 
+async function hasOwnerColumn(): Promise<boolean> {
+  const supabase = getSupabaseAdmin()
+  const { data } = await supabase
+    .from("information_schema.columns")
+    .select("column_name")
+    .eq("table_schema", "public")
+    .eq("table_name", "orders")
+    .eq("column_name", "owner_id")
+    .maybeSingle()
+  return Boolean(data)
+}
+
 export async function GET(request: Request) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const supabase = getSupabaseAdmin()
-    const { data, error } = await supabase.from("orders").select("*").order("date", { ascending: false })
+    const ownerAware = await hasOwnerColumn()
+    let query = supabase.from("orders").select("*").order("date", { ascending: false })
+    if (ownerAware) query = query.eq("owner_id", user.id)
+    const { data, error } = await query
     if (error) throw error
     return NextResponse.json({ orders: (data || []).map(toOrder) })
   } catch (err: any) {
@@ -40,6 +55,7 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin()
+    const ownerAware = await hasOwnerColumn()
     const insertRow = {
       client_id: payload.clientId,
       product: payload.product,
@@ -47,6 +63,7 @@ export async function POST(request: Request) {
       amount: payload.amount,
       date: new Date(payload.date).toISOString(),
       status: payload.status || "pending",
+      ...(ownerAware ? { owner_id: user.id } : {}),
     }
 
     const { data, error } = await supabase.from("orders").insert(insertRow).select("*").single()
