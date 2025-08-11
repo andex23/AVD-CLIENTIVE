@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 import type { Task } from "@/types/task"
 
@@ -27,15 +27,8 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const supabase = getSupabaseAdmin()
-    let { data, error } = await supabase
-      .from("tasks")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false })
-    if (error && isOwnerColumnMissing(error)) {
-      ;({ data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: false }))
-    }
+    const supabase = getSupabaseRLSClient(request)
+    const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: false })
     if (error) throw error
     return NextResponse.json({ tasks: (data || []).map(toTask) })
   } catch (err: any) {
@@ -53,7 +46,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "title, clientId, dueDate are required" }, { status: 400 })
     }
 
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseRLSClient(request)
     const insertRow = {
       title: payload.title,
       description: payload.description || null,
@@ -65,12 +58,7 @@ export async function POST(request: Request) {
       email_notify: !!payload.emailNotify,
       owner_id: user.id,
     }
-    let { data, error } = await supabase.from("tasks").insert(insertRow).select("*").single()
-    if (error && isOwnerColumnMissing(error)) {
-      const retryRow = { ...insertRow }
-      delete (retryRow as any).owner_id
-      ;({ data, error } = await supabase.from("tasks").insert(retryRow).select("*").single())
-    }
+    const { data, error } = await supabase.from("tasks").insert(insertRow).select("*").single()
     if (error) throw error
     return NextResponse.json({ task: toTask(data) })
   } catch (err: any) {

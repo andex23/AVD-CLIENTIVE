@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 import type { Client } from "@/types/client"
 
@@ -28,16 +28,8 @@ export async function GET(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const supabase = getSupabaseAdmin()
-    // Try owner scoping first; if column doesn't exist, fall back
-    let { data, error } = await supabase
-      .from("clients")
-      .select("*")
-      .eq("owner_id", user.id)
-      .order("created_at", { ascending: false })
-    if (error && isOwnerColumnMissing(error)) {
-      ;({ data, error } = await supabase.from("clients").select("*").order("created_at", { ascending: false }))
-    }
+    const supabase = getSupabaseRLSClient(request)
+    let { data, error } = await supabase.from("clients").select("*").order("created_at", { ascending: false })
     if (error) throw error
     return NextResponse.json({ clients: (data || []).map(toClient) })
   } catch (err: any) {
@@ -55,7 +47,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name and email are required" }, { status: 400 })
     }
 
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseRLSClient(request)
     const insertRow = {
       name: payload.name,
       email: payload.email,
@@ -68,12 +60,7 @@ export async function POST(request: Request) {
       interactions: payload.interactions ?? [],
       owner_id: user.id,
     }
-    let { data, error } = await supabase.from("clients").insert(insertRow).select("*").single()
-    if (error && isOwnerColumnMissing(error)) {
-      const retryRow = { ...insertRow }
-      delete (retryRow as any).owner_id
-      ;({ data, error } = await supabase.from("clients").insert(retryRow).select("*").single())
-    }
+    const { data, error } = await supabase.from("clients").insert(insertRow).select("*").single()
     if (error) throw error
     return NextResponse.json({ client: toClient(data) })
   } catch (err: any) {

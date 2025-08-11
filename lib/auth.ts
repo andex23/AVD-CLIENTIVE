@@ -12,19 +12,17 @@ export function isServerAuthConfigured() {
  * Returns { user, error } where user is null when unauthorized.
  */
 export async function requireUser(request: Request) {
-  // Require configuration in production
-  if (!isServerAuthConfigured()) {
-    return { user: null, error: "Auth is not configured" }
-  }
-
   // Expect Authorization: Bearer <token>
   const auth = request.headers.get("authorization") || ""
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : ""
   if (!token) return { user: null, error: "Missing access token" }
 
+  // Validate token using admin to obtain user id, but RLS will be enforced by using the RLS client in routes
+  if (!isServerAuthConfigured()) {
+    return { user: null, error: "Auth is not configured" }
+  }
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.auth.getUser(token)
   if (error || !data?.user) return { user: null, error: "Invalid token" }
-
   return { user: data.user, error: null }
 }
