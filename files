@@ -1,0 +1,220 @@
+// lib/auth.ts
+import { getSupabaseAdmin } from "@/lib/supabase/admin"
+
+export function isServerAuthConfigured() {
+  return Boolean(
+    (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+    (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
+  )
+}
+
+export async function requireUser(request: Request) {
+  // Preview override via header
+  const preview = request.headers.get("x-preview")
+  if (preview === "1") {
+    return { user: { id: "preview-user" }, error: null }
+  }
+
+  // In dev/preview, allow unauthenticated access if Supabase isn't set up yet.
+  if (!isServerAuthConfigured()) {
+    return { user: { id: "dev-preview-user" }, error: null }
+  }
+
+  const auth = request.headers.get("authorization") || ""
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : ""
+  if (!token) return { user: null, error: "Missing access token" }
+
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase.auth.getUser(token)
+  if (error || !data?.user) return { user: null, error: "Invalid token" }
+
+  return { user: data.user, error: null }
+}
+
+// lib/api-client.ts
+"use client"
+
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+
+function isPreviewUrl() {
+  if (typeof window === "undefined") return false
+  return new URLSearchParams(window.location.search).get("preview") === "1"
+}
+
+export async function apiFetch<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const supabase = getSupabaseBrowserClient()
+  const { data: sess } = await supabase.auth.getSession()
+  const token = sess.session?.access_token
+
+  const headers = new Headers(init?.headers)
+  if (token) headers.set("Authorization", `Bearer ${token}`)
+  if (!headers.has("Content-Type") && init?.body) headers.set("Content-Type", "application/json")
+  if (isPreviewUrl()) headers.set("X-Preview", "1")
+
+  const res = await fetch(path, { ...init, headers, cache: "no-store" })
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(text || `Request failed: ${res.status}`)
+  }
+  return res.json() as Promise<T>
+}
+
+// app/dashboard/page.tsx
+"use client"
+
+import { useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import DashboardInner from "./_shell"
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const params = useSearchParams()
+  const preview = params.get("preview") === "1"
+
+  useEffect(() => {
+    if (preview) return // Skip auth in preview mode
+    const check = async () => {
+      try {
+        const supabase = getSupabaseBrowserClient()
+        const { data } = await supabase.auth.getUser()
+        if (!data?.user) router.replace("/auth/sign-in")
+      } catch {
+        router.replace("/auth/sign-in")
+      }
+    }
+    check()
+  }, [router, preview])
+
+  return <DashboardInner />
+}
+
+// app/auth/sign-up/page.tsx
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { signUpWith } from "@/lib/auth"
+
+export default function SignUpPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [configured, setConfigured] = useState(false)
+
+  useEffect(() => {
+    setConfigured(
+      Boolean(
+        (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+        (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
+      )
+    )
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!configured) {
+      router.push("/dashboard?preview=1")
+      return
+    }
+    // Handle sign up logic here
+  }
+
+  return (
+    <div className="flex flex-col space-y-4">
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div className="flex flex-col space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <Button type="submit" className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white">
+          Sign Up
+        </Button>
+      </form>
+      <div className="mt-8 space-y-3">
+        <Button variant="outline" className="w-full h-10 bg-transparent" onClick={() => signUpWith("google")} disabled={!configured}>
+          Continue with Google
+        </Button>
+        <Button variant="outline" className="w-full h-10 bg-transparent" onClick={() => signUpWith("github")} disabled={!configured}>
+          Continue with GitHub
+        </Button>
+        <Button type="button" className="w-full h-10 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => router.push("/dashboard?preview=1")}>
+          Explore demo (no sign up)
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// app/auth/sign-in/page.tsx
+"use client"
+
+import { useRouter } from "next/navigation"
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { signInWith } from "@/lib/auth"
+
+export default function SignInPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [configured, setConfigured] = useState(false)
+
+  useEffect(() => {
+    setConfigured(
+      Boolean(
+        (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL) &&
+        (process.env.SUPABASE_SERVICE_ROLE || process.env.SUPABASE_SERVICE_ROLE_KEY)
+      )
+    )
+  }, [])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!configured) {
+      router.push("/dashboard?preview=1")
+      return
+    }
+    // Handle sign in logic here
+  }
+
+  return (
+    <div className="flex flex-col space-y-4">
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+        <div className="flex flex-col space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        </div>
+        <Button type="submit" className="w-full h-10 bg-blue-500 hover:bg-blue-600 text-white">
+          Sign In
+        </Button>
+      </form>
+      <div className="mt-8 space-y-3">
+        <Button variant="outline" className="w-full h-10 bg-transparent" onClick={() => signInWith("google")} disabled={!configured}>
+          Continue with Google
+        </Button>
+        <Button variant="outline" className="w-full h-10 bg-transparent" onClick={() => signInWith("github")} disabled={!configured}>
+          Continue with GitHub
+        </Button>
+        <Button type="button" className="w-full h-10 bg-orange-500 hover:bg-orange-600 text-white" onClick={() => router.push("/dashboard?preview=1")}>
+          Explore demo (no sign in)
+        </Button>
+      </div>
+    </div>
+  )
+}
