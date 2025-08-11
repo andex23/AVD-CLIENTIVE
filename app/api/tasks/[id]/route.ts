@@ -2,6 +2,11 @@ import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth"
 
+function isOwnerColumnMissing(err: any) {
+  const msg = String(err?.message || "")
+  return msg.includes("owner_id") && msg.includes("does not exist")
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -20,7 +25,16 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if ("completed" in body) updates.completed = !!body.completed
     if ("emailNotify" in body) updates.email_notify = !!body.emailNotify
 
-    const { data, error } = await supabase.from("tasks").update(updates).eq("id", params.id).select("*").single()
+    let { data, error } = await supabase
+      .from("tasks")
+      .update(updates)
+      .eq("id", params.id)
+      .eq("owner_id", user.id)
+      .select("*")
+      .single()
+    if (error && isOwnerColumnMissing(error)) {
+      ;({ data, error } = await supabase.from("tasks").update(updates).eq("id", params.id).select("*").single())
+    }
     if (error) throw error
     return NextResponse.json({ task: data })
   } catch (err: any) {
@@ -34,7 +48,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   try {
     const supabase = getSupabaseAdmin()
-    const { error } = await supabase.from("tasks").delete().eq("id", params.id)
+    let { error } = await supabase.from("tasks").delete().eq("id", params.id).eq("owner_id", user.id)
+    if (error && isOwnerColumnMissing(error)) {
+      ;({ error } = await supabase.from("tasks").delete().eq("id", params.id))
+    }
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {

@@ -15,16 +15,9 @@ function toOrder(row: any): Order {
   }
 }
 
-async function hasOwnerColumn(): Promise<boolean> {
-  const supabase = getSupabaseAdmin()
-  const { data } = await supabase
-    .from("information_schema.columns")
-    .select("column_name")
-    .eq("table_schema", "public")
-    .eq("table_name", "orders")
-    .eq("column_name", "owner_id")
-    .maybeSingle()
-  return Boolean(data)
+function isOwnerColumnMissing(err: any) {
+  const msg = String(err?.message || "")
+  return msg.includes("owner_id") && msg.includes("does not exist")
 }
 
 export async function GET(request: Request) {
@@ -33,10 +26,14 @@ export async function GET(request: Request) {
 
   try {
     const supabase = getSupabaseAdmin()
-    const ownerAware = await hasOwnerColumn()
-    let query = supabase.from("orders").select("*").order("date", { ascending: false })
-    if (ownerAware) query = query.eq("owner_id", user.id)
-    const { data, error } = await query
+    let { data, error } = await supabase
+      .from("orders")
+      .select("*")
+      .eq("owner_id", user.id)
+      .order("date", { ascending: false })
+    if (error && isOwnerColumnMissing(error)) {
+      ;({ data, error } = await supabase.from("orders").select("*").order("date", { ascending: false }))
+    }
     if (error) throw error
     return NextResponse.json({ orders: (data || []).map(toOrder) })
   } catch (err: any) {
@@ -55,7 +52,6 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin()
-    const ownerAware = await hasOwnerColumn()
     const insertRow = {
       client_id: payload.clientId,
       product: payload.product,
@@ -63,10 +59,14 @@ export async function POST(request: Request) {
       amount: payload.amount,
       date: new Date(payload.date).toISOString(),
       status: payload.status || "pending",
-      ...(ownerAware ? { owner_id: user.id } : {}),
+      owner_id: user.id,
     }
-
-    const { data, error } = await supabase.from("orders").insert(insertRow).select("*").single()
+    let { data, error } = await supabase.from("orders").insert(insertRow).select("*").single()
+    if (error && isOwnerColumnMissing(error)) {
+      const retryRow = { ...insertRow }
+      delete (retryRow as any).owner_id
+      ;({ data, error } = await supabase.from("orders").insert(retryRow).select("*").single())
+    }
     if (error) throw error
     return NextResponse.json({ order: toOrder(data) })
   } catch (err: any) {

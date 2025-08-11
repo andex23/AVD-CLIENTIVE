@@ -2,6 +2,18 @@ import { NextResponse } from "next/server"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth"
 
+async function hasOwnerColumn(): Promise<boolean> {
+  const supabase = getSupabaseAdmin()
+  const { data } = await supabase
+    .from("information_schema.columns")
+    .select("column_name")
+    .eq("table_schema", "public")
+    .eq("table_name", "clients")
+    .eq("column_name", "owner_id")
+    .maybeSingle()
+  return Boolean(data)
+}
+
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -21,7 +33,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if ("notes" in body) updates.notes = body.notes ?? null
     if ("interactions" in body) updates.interactions = body.interactions ?? []
 
-    const { data, error } = await supabase.from("clients").update(updates).eq("id", params.id).select("*").single()
+    const ownerAware = await hasOwnerColumn()
+    let query = supabase.from("clients").update(updates).eq("id", params.id)
+    if (ownerAware) query = query.eq("owner_id", user.id)
+    const { data, error } = await query.select("*").single()
     if (error) throw error
     return NextResponse.json({ client: data })
   } catch (err: any) {
@@ -35,7 +50,10 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
   try {
     const supabase = getSupabaseAdmin()
-    const { error } = await supabase.from("clients").delete().eq("id", params.id)
+    const ownerAware = await hasOwnerColumn()
+    let query = supabase.from("clients").delete().eq("id", params.id)
+    if (ownerAware) query = query.eq("owner_id", user.id)
+    const { error } = await query
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {
