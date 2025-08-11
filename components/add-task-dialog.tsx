@@ -101,7 +101,7 @@ export function AddTaskDialog({ open, onOpenChange, clients }: AddTaskDialogProp
               <div className="space-y-2">
                 <Label htmlFor="client">Client *</Label>
                 <Select
-                  value={formData.clientId}
+                  value={formData.clientId || undefined}
                   onValueChange={(value) => setFormData((prev) => ({ ...prev, clientId: value }))}
                 >
                   <SelectTrigger>
