@@ -1,30 +1,70 @@
-# Small business CRM features
+# AVD Clientive
 
-*Automatically synced with your [v0.app](https://v0.app) deployments*
+**AVD Clientive** is a free, lightweight CRM built for freelancers and small business owners.  
+It helps you manage clients, track follow-ups, and optionally log orders — without the complexity of traditional CRM software.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.app-black?style=for-the-badge)](https://v0.app/chat/projects/CLbAi3NYDFs)
+---
 
-## Overview
+## 🚀 Features
 
-This repository will stay in sync with your deployed chats on [v0.app](https://v0.app).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.app](https://v0.app).
+- **Client Management**  
+  Add, edit, and search client profiles with contact details, notes, and tags.
 
-## Deployment
+- **Smart Follow-Ups**  
+  Create follow-up tasks with quick actions for WhatsApp, phone calls, or email.
 
-Your project is live at:
+- **Interaction History**  
+  Keep a record of conversations, meetings, and past activities.
 
-**[https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features](https://vercel.com/drus-projects-68c924fa/v0-small-business-crm-features)**
+- **Dashboard Overview**  
+  See total clients, today’s tasks, recent activity, and inactive customers.
 
-## Build your app
+- **Data Ownership**  
+  Import and export your data anytime (CSV/Excel format).
 
-Continue building your app on:
+- **Optional Order Tracking**  
+  For small business owners who need to log purchases or sales.
 
-**[https://v0.app/chat/projects/CLbAi3NYDFs](https://v0.app/chat/projects/CLbAi3NYDFs)**
+---
 
-## How It Works
+## 📦 Tech Stack
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+- **Frontend:** Next.js + React  
+- **Styling:** Tailwind CSS + Shadcn UI  
+- **Database:** Supabase  
+- **Auth:** NextAuth.js  
+- **Deployment:** Vercel
+
+---
+📜 License
+
+MIT License © 2025 AVD Clientive
+
+## 🛠 Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/avd-clientive.git
+
+# Navigate to the project folder
+cd avd-clientive
+
+# Install dependencies
+npm install
+
+# Create an .env file and add your environment variables
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+
+# Start the development server
+npm run dev
+
+🗂 Project Structure
+/components   → Reusable UI components
+/pages        → Application pages
+/styles       → Tailwind CSS configuration
+/lib          → Utility functions
+
+
+
+
