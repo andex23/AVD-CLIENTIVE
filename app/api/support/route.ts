@@ -43,9 +43,8 @@ async function sendEmail({
   `
 
   try {
-    const fromAddress = process.env.RESEND_FROM || "onboarding@resend.dev"
     const { error } = await resend.emails.send({
-      from: fromAddress,
+      from: inbox,
       to: inbox,
       replyTo: email,
       subject,

@@ -188,10 +188,10 @@ export default function SupportPage() {
                       <span className="text-sm text-slate-500">
                         {"Or email us at "}
                         <a
-                          href="mailto:villamdomum@gmail.com"
+                          href="mailto:support@avdclientive.com"
                           className="underline decoration-slate-300 hover:text-slate-700"
                         >
-                          {"villamdomum@gmail.com"}
+                          {"support@avdclientive.com"}
                         </a>
                       </span>
                     </div>
