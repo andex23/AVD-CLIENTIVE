@@ -2,6 +2,14 @@
 
 Lightweight CRM built with Next.js 15, React 19, Tailwind CSS, and Supabase. Includes clients, orders, and tasks with email support contact.
 
+### Badges
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=061a23)](https://react.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-2-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+
 ### Features
 - Clients, tasks, and orders CRUD (Supabase)
 - Auth via Supabase (email/password)
@@ -80,4 +88,14 @@ pnpm start
 - Tailwind CSS
 - Supabase (Postgres + Auth)
 - Resend (email)
+
+### Screenshots
+
+Dashboard and features overview:
+
+![Landing screenshot](public/images/landing-reference.png)
+
+Auth flow (sign-in):
+
+![Auth screenshot](public/images/auth-reference.png)
 
