@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { toFriendlyError } from "@/lib/errors"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -57,7 +58,7 @@ export default function SignUpPage() {
 
       router.push("/dashboard")
     } catch (err: any) {
-      setError(err?.message || "Sign up failed")
+      setError(toFriendlyError(err?.message || "Sign up failed"))
     } finally {
       setLoading(false)
     }

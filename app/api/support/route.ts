@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { toFriendlyError } from "@/lib/errors"
 
 // Simple in-memory fixed-window rate limiter (per IP).
 const RATE_WINDOW_MS = 60_000
@@ -89,20 +90,20 @@ export async function POST(req: Request) {
   try {
     body = await req.json()
   } catch (_err: unknown) {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
+    return NextResponse.json({ error: toFriendlyError("Invalid JSON body", 400) }, { status: 400 })
   }
   const name = String(body?.name ?? "").trim()
   const email = String(body?.email ?? "").trim()
   const message = String(body?.message ?? "").trim()
 
   if (!name || !email || !message) {
-    return NextResponse.json({ error: "Missing name, email, or message" }, { status: 400 })
+    return NextResponse.json({ error: toFriendlyError("Missing name, email, or message", 400) }, { status: 400 })
   }
   if (!isValidEmail(email)) {
-    return NextResponse.json({ error: "Invalid email" }, { status: 400 })
+    return NextResponse.json({ error: toFriendlyError("Invalid email", 400) }, { status: 400 })
   }
   if (message.length > 5000) {
-    return NextResponse.json({ error: "Message too long" }, { status: 400 })
+    return NextResponse.json({ error: toFriendlyError("Message too long", 400) }, { status: 400 })
   }
 
   const result = await sendEmail({ name, email, message })
