@@ -26,7 +26,7 @@ import { OrdersProvider, useOrders } from "@/hooks/use-orders"
 import { SettingsProvider, useSettings } from "@/hooks/use-settings"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
+import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
 
 type NavKey = "overview" | "clients" | "tasks" | "orders" | "settings"
 
@@ -38,6 +38,7 @@ function DashboardInner({
   setTab: (t: "clients" | "tasks" | "orders") => void
 }) {
   const router = useRouter()
+  const { toggleSidebar } = useSidebar()
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddClient, setShowAddClient] = useState(false)
   const [showImportClients, setShowImportClients] = useState(false)
@@ -163,6 +164,16 @@ function DashboardInner({
               className="border-white/30 hover:bg-white/10 text-black bg-white"
             >
               <Filter className="h-4 w-4 mr-2" /> Filter
+            </Button>
+            {/* Explicit mobile menu trigger for visibility */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="sm:hidden text-white hover:bg-white/10"
+              onClick={toggleSidebar}
+              aria-label="Open menu"
+            >
+              Menu
             </Button>
             <Button
               variant="outline"
