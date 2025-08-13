@@ -25,7 +25,17 @@ export default function SignInPage() {
     try {
       const supabase = getSupabaseBrowserClient()
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
-      if (signInErr) throw signInErr
+      if (signInErr) {
+        if (String(signInErr.message || "").toLowerCase().includes("confirm")) {
+          setError(null)
+          // Offer resend flow
+          const { error: resendErr } = await supabase.auth.resend({ type: "signup", email })
+          if (resendErr) throw resendErr
+          setError("Email not confirmed. We’ve resent the confirmation email.")
+          return
+        }
+        throw signInErr
+      }
       router.push("/dashboard")
     } catch (err: any) {
       setError(err?.message || "Sign in failed")

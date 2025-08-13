@@ -35,17 +35,17 @@ export default function SignUpPage() {
     try {
       const supabase = getSupabaseBrowserClient()
 
-      const { error: signUpError } = await supabase.auth.signUp({
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: { data: { full_name: fullName.trim() } },
       })
       if (signUpError) throw signUpError
 
-      // Try to sign in immediately (depends on your Supabase email confirmation settings)
+      // If email confirmation is required, inform user and provide resend
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password })
       if (signInErr) {
-        setInfo("Account created. Please check your email to confirm your address before signing in.")
+        setInfo("Account created. Check your email to confirm your address, then sign in.")
         return
       }
 
@@ -90,7 +90,24 @@ export default function SignUpPage() {
             )}
             {info && (
               <Alert className="mt-6">
-                <AlertDescription>{info}</AlertDescription>
+                <AlertDescription>
+                  {info}
+                  <br />
+                  Didn’t get an email? <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const supabase = getSupabaseBrowserClient()
+                        const { error } = await supabase.auth.resend({ type: "signup", email })
+                        if (error) throw error
+                        setInfo("Confirmation email resent. Please check your inbox.")
+                      } catch (e: any) {
+                        setError(e?.message || "Could not resend confirmation")
+                      }
+                    }}
+                    className="underline text-orange-600"
+                  >Resend email</button>
+                </AlertDescription>
               </Alert>
             )}
 
