@@ -134,11 +134,11 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select
-                value={formData.status}
+                value={(formData.status as any) || undefined}
                 onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="prospect">Prospect</SelectItem>

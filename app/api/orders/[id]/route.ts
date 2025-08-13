@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { getSupabaseAdmin } from "@/lib/supabase/admin"
+import { toFriendlyError } from "@/lib/errors"
+import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 
 function isOwnerColumnMissing(err: any) {
@@ -12,7 +13,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const supabase = getSupabaseAdmin()
+    const supabase = getSupabaseRLSClient(request)
     const body = await request.json()
 
     const updates: any = {}
@@ -30,13 +31,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       .eq("owner_id", user.id)
       .select("*")
       .single()
-    if (error && isOwnerColumnMissing(error)) {
-      ;({ data, error } = await supabase.from("orders").update(updates).eq("id", params.id).select("*").single())
-    }
     if (error) throw error
     return NextResponse.json({ order: data })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to update order", 500) }, { status: 500 })
   }
 }
 
@@ -45,14 +43,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
-    const supabase = getSupabaseAdmin()
-    let { error } = await supabase.from("orders").delete().eq("id", params.id).eq("owner_id", user.id)
-    if (error && isOwnerColumnMissing(error)) {
-      ;({ error } = await supabase.from("orders").delete().eq("id", params.id))
-    }
+    const supabase = getSupabaseRLSClient(request)
+    const { error } = await supabase.from("orders").delete().eq("id", params.id).eq("owner_id", user.id)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to delete order", 500) }, { status: 500 })
   }
 }

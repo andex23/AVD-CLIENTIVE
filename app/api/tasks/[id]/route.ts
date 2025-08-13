@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { toFriendlyError } from "@/lib/errors"
 import { getSupabaseAdmin } from "@/lib/supabase/admin"
 import { requireUser } from "@/lib/auth"
 
@@ -38,7 +39,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (error) throw error
     return NextResponse.json({ task: data })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to update task", 500) }, { status: 500 })
   }
 }
 
@@ -55,6 +56,6 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to delete task", 500) }, { status: 500 })
   }
 }
