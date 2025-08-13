@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { toFriendlyError } from "@/lib/errors"
 import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 import type { Client } from "@/types/client"
@@ -33,7 +34,7 @@ export async function GET(request: Request) {
     if (error) throw error
     return NextResponse.json({ clients: (data || []).map(toClient) })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to fetch clients", 500) }, { status: 500 })
   }
 }
 
@@ -64,6 +65,6 @@ export async function POST(request: Request) {
     if (error) throw error
     return NextResponse.json({ client: toClient(data) })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to create client", 500) }, { status: 500 })
   }
 }

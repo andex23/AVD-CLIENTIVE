@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { toFriendlyError } from "@/lib/errors"
 import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 import type { Task } from "@/types/task"
@@ -32,7 +33,7 @@ export async function GET(request: Request) {
     if (error) throw error
     return NextResponse.json({ tasks: (data || []).map(toTask) })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to fetch tasks", 500) }, { status: 500 })
   }
 }
 
@@ -62,6 +63,6 @@ export async function POST(request: Request) {
     if (error) throw error
     return NextResponse.json({ task: toTask(data) })
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: toFriendlyError(err?.message || "Failed to create task", 500) }, { status: 500 })
   }
 }

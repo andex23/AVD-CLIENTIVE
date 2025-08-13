@@ -1,6 +1,7 @@
 "use client"
 
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { toFriendlyError } from "@/lib/errors"
 
 /**
  * Production fetch helper:
@@ -32,7 +33,7 @@ export async function apiFetch<T = any>(path: string, init?: RequestInit): Promi
         // ignore
       }
     }
-    throw new Error(message)
+    throw new Error(toFriendlyError(message, res.status))
   }
   return res.json() as Promise<T>
 }
