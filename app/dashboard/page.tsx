@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Plus, Search, Filter, Download, Upload, Users, Calendar, Bell, Clock, LogOut } from "lucide-react"
+import { Plus, Search, Filter, Download, Upload, Users, Calendar, Bell, Clock, LogOut, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -168,12 +168,12 @@ function DashboardInner({
             {/* Explicit mobile menu trigger for visibility */}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               className="sm:hidden text-white hover:bg-white/10"
               onClick={toggleSidebar}
               aria-label="Open menu"
             >
-              Menu
+              <Menu className="h-5 w-5" />
             </Button>
             <Button
               variant="outline"
