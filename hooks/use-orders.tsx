@@ -4,6 +4,7 @@ import * as React from "react"
 import type { Order } from "@/types/order"
 import { apiFetch } from "@/lib/api-client"
 import { safeDate } from "@/lib/date"
+import { demoOrders } from "@/lib/demo-data"
 
 type OrdersContextValue = {
   orders: Order[]
@@ -28,7 +29,9 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       setOrders(orders)
       } catch (e) {
         console.warn("Orders load failed; starting empty until auth is configured.", e)
-        setOrders([])
+        const isPreview =
+          typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
+        setOrders(isPreview ? demoOrders : [])
       }
     }
     load()

@@ -4,13 +4,14 @@ import * as React from "react"
 import type { Client } from "@/types/client"
 import type { FilterOptions } from "@/components/filter-dialog"
 import { apiFetch } from "@/lib/api-client"
+import { demoClients } from "@/lib/demo-data"
 import { useToast } from "@/hooks/use-toast"
 
 type ClientsContextValue = {
   clients: Client[]
   filteredClients: Client[]
   recentClients: Client[]
-  addClient: (clientData: Omit<Client, "id">) => Promise<void>
+  addClient: (clientData: Omit<Client, "id">) => Promise<Client>
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>
   deleteClient: (id: string) => Promise<void>
   searchClients: (query: string) => void
@@ -21,17 +22,7 @@ const ClientsContext = React.createContext<ClientsContextValue | null>(null)
 
 const STORAGE_KEY = "crm:clients"
 
-const localSample: Client[] = [
-  {
-    id: "sample-1",
-    name: "Sample Client",
-    email: "sample@example.com",
-    status: "prospect",
-    lastContact: new Date().toISOString(),
-    tags: ["example"],
-    interactions: [],
-  },
-]
+const localSample: Client[] = demoClients
 
 function loadLocal(): Client[] {
   try {
@@ -90,6 +81,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
           return next
         })
         toast({ title: "Client added", description: `${clientData.name} was added successfully.` })
+        return data.client
       } catch (e: any) {
         // Preview/local fallback
         const local: Client = { ...clientData, id: `local-${Date.now()}` }
@@ -103,6 +95,7 @@ export function ClientsProvider({ children }: { children: React.ReactNode }) {
           title: "Saved locally",
           description: "We couldn't reach the server. The client was saved locally for now.",
         })
+        return local
       }
     },
     [toast],

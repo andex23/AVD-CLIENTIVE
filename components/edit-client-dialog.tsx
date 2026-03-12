@@ -2,22 +2,15 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
+import { X } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { X } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 import { useClients } from "@/hooks/use-clients"
 import type { Client } from "@/types/client"
 
@@ -29,7 +22,15 @@ interface EditClientDialogProps {
 
 export function EditClientDialog({ client, open, onOpenChange }: EditClientDialogProps) {
   const { updateClient } = useClients()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string
+    email: string
+    phone: string
+    company: string
+    status: Client["status"]
+    notes: string
+    tags: string[]
+  }>({
     name: "",
     email: "",
     phone: "",
@@ -41,104 +42,88 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
   const [newTag, setNewTag] = useState("")
 
   useEffect(() => {
-    if (client) {
-      setFormData({
-        name: client.name,
-        email: client.email,
-        phone: client.phone || "",
-        company: client.company || "",
-        status: client.status,
-        notes: client.notes || "",
-        tags: client.tags,
-      })
-    }
+    setFormData({
+      name: client.name,
+      email: client.email,
+      phone: client.phone || "",
+      company: client.company || "",
+      status: client.status,
+      notes: client.notes || "",
+      tags: client.tags,
+    })
   }, [client])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const addTag = () => {
+    const trimmed = newTag.trim()
+    if (!trimmed || formData.tags.includes(trimmed)) return
+    setFormData((current) => ({ ...current, tags: [...current.tags, trimmed] }))
+    setNewTag("")
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData((current) => ({
+      ...current,
+      tags: current.tags.filter((tag) => tag !== tagToRemove),
+    }))
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
     if (!formData.name || !formData.email) return
 
-    updateClient(client.id, {
+    await updateClient(client.id, {
       ...formData,
-      lastContact: new Date().toISOString(),
+      lastContact: client.lastContact,
     })
 
     onOpenChange(false)
   }
 
-  const addTag = () => {
-    if (newTag.trim() && !formData.tags.includes(newTag.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, newTag.trim()],
-      }))
-      setNewTag("")
-    }
-  }
-
-  const removeTag = (tagToRemove: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }))
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-[hsl(var(--surface-ivory))] sm:max-w-[760px]">
         <DialogHeader>
-          <DialogTitle>Edit Client</DialogTitle>
-          <DialogDescription>Update client information.</DialogDescription>
+          <DialogTitle className="font-sans text-xl">Edit client</DialogTitle>
+          <DialogDescription>Refine the relationship record without turning it into a heavy CRM form.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                  required
-                />
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <section className="card-passive space-y-3 p-4">
+              <p className="ui-kicker">Identity</p>
+              <div className="grid gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-name">Name *</Label>
+                  <Input id="edit-client-name" value={formData.name} onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-company">Business / context</Label>
+                  <Input id="edit-client-company" value={formData.company} onChange={(event) => setFormData((current) => ({ ...current, company: event.target.value }))} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                  required
-                />
+            </section>
+
+            <section className="card-passive space-y-3 p-4">
+              <p className="ui-kicker">Contact methods</p>
+              <div className="grid gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-email">Email *</Label>
+                  <Input id="edit-client-email" type="email" value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-client-phone">Phone</Label>
+                  <Input id="edit-client-phone" value={formData.phone} onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))} />
+                </div>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input
-                  id="company"
-                  value={formData.company}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, company: e.target.value }))}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <Select
-                value={(formData.status as any) || undefined}
-                onValueChange={(value: any) => setFormData((prev) => ({ ...prev, status: value }))}
-              >
+            </section>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-[0.7fr_1.3fr]">
+            <section className="card-passive space-y-3 p-4">
+              <p className="ui-kicker">Stage</p>
+              <Select value={formData.status} onValueChange={(value) => setFormData((current) => ({ ...current, status: value as typeof formData.status }))}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="prospect">Prospect</SelectItem>
@@ -148,44 +133,49 @@ export function EditClientDialog({ client, open, onOpenChange }: EditClientDialo
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
+            </section>
+
+            <section className="card-passive space-y-3 p-4">
+              <p className="ui-kicker">Tags</p>
               <div className="flex gap-2">
                 <Input
                   value={newTag}
-                  onChange={(e) => setNewTag(e.target.value)}
-                  placeholder="Add a tag (VIP, Lead, etc.)"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                  onChange={(event) => setNewTag(event.target.value)}
+                  placeholder="Referral, VIP, Retainer"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault()
+                      addTag()
+                    }
+                  }}
                 />
                 <Button type="button" variant="outline" onClick={addTag}>
                   Add
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex min-h-8 flex-wrap gap-2">
                 {formData.tags.map((tag) => (
-                  <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+                  <Badge key={tag} variant="outline" className="border-border/80 bg-background/85 pr-1">
                     {tag}
-                    <X className="h-3 w-3 cursor-pointer" onClick={() => removeTag(tag)} />
+                    <button type="button" className="ml-2 text-muted-foreground" onClick={() => removeTag(tag)} aria-label={`Remove ${tag}`}>
+                      <X className="h-3 w-3" />
+                    </button>
                   </Badge>
                 ))}
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Textarea
-                id="notes"
-                value={formData.notes}
-                onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                rows={3}
-              />
-            </div>
+            </section>
           </div>
-          <DialogFooter>
+
+          <section className="card-passive space-y-3 p-4">
+            <p className="ui-kicker">Notes</p>
+            <Textarea value={formData.notes} onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))} placeholder="Short relationship notes, tone cues, or project context." />
+          </section>
+
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">Update Client</Button>
+            <Button type="submit">Save changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

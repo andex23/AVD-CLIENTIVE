@@ -27,7 +27,14 @@ interface AddOrderDialogProps {
 
 export function AddOrderDialog({ open, onOpenChange, clients }: AddOrderDialogProps) {
   const { addOrder } = useOrders()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    product: string
+    description: string
+    clientId: string
+    amount: string
+    date: string
+    status: "pending" | "processing" | "completed" | "cancelled"
+  }>({
     product: "",
     description: "",
     clientId: "",

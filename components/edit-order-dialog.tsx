@@ -29,7 +29,14 @@ interface EditOrderDialogProps {
 
 export function EditOrderDialog({ order, clients, open, onOpenChange }: EditOrderDialogProps) {
   const { updateOrder } = useOrders()
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    product: string
+    description: string
+    clientId: string
+    amount: string
+    date: string
+    status: Order["status"]
+  }>({
     product: "",
     description: "",
     clientId: "",

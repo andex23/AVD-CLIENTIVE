@@ -1,335 +1,217 @@
 "use client"
 
-import * as React from "react"
+import type React from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Users, ShieldAlert } from "lucide-react"
-import { useTheme } from "next-themes"
-
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
-import { PersistentSidebarProvider } from "@/components/persistent-sidebar-provider"
-import { AppSidebar } from "@/components/app-sidebar"
-
+import { BellDot, ChevronRight, CreditCard, LogOut, Package2, Settings2, Sparkles, User2 } from "lucide-react"
+import { AppChrome } from "@/components/app-chrome"
+import type { AppNavKey } from "@/components/app-sidebar"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-
-import { useToast } from "@/hooks/use-toast"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-
-import { ImportDialog } from "@/components/import-dialog"
-import { ExportDialog } from "@/components/export-dialog"
-
+import { useAppSession } from "@/hooks/use-app-session"
 import { SettingsProvider, useSettings } from "@/hooks/use-settings"
-import { ClientsProvider, useClients } from "@/hooks/use-clients"
-import { OrdersProvider, useOrders } from "@/hooks/use-orders"
-
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string
-  description?: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="py-8">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold">{title}</h2>
-        {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  )
-}
 
 function SettingsContent() {
   const router = useRouter()
-  const { toast } = useToast()
-
-  // Theme
-  const { setTheme, resolvedTheme } = useTheme()
-  const [prefThemeDark, setPrefThemeDark] = React.useState(false)
-
-  // Settings store (notifications or other future settings)
   const { settings, updateSettings } = useSettings()
-  const [notificationsOn, setNotificationsOn] = React.useState<boolean>(settings.emailNotificationsEnabled ?? false)
+  const { loading, userName, userEmail, isPreview, signOut } = useAppSession()
 
-  // Profile info
-  const [name, setName] = React.useState("Jane Doe")
-  const [email, setEmail] = React.useState("jane@example.com")
-
-  // Data dialogs (need clients/orders from providers)
-  const { clients } = useClients()
-  const { orders } = useOrders()
-  const [openImport, setOpenImport] = React.useState(false)
-  const [openExport, setOpenExport] = React.useState(false)
-
-  // Dirty state
-  const [dirty, setDirty] = React.useState(false)
-
-  // Supabase client-side check
-  const supabaseConfigured =
-    typeof process !== "undefined" &&
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
-
-  // Initialize theme toggle to current theme
-  React.useEffect(() => {
-    if (resolvedTheme) setPrefThemeDark(resolvedTheme === "dark")
-  }, [resolvedTheme])
-
-  // Load profile from Supabase/local
-  React.useEffect(() => {
-    const init = async () => {
-      try {
-        let localName = ""
-        if (typeof window !== "undefined") {
-          localName = localStorage.getItem("crm:userName") || ""
-        }
-        const supabase = getSupabaseBrowserClient()
-        const { data } = await supabase.auth.getUser()
-        const meta = data?.user?.user_metadata || {}
-        const rawName = (meta.full_name || meta.name || localName || "Jane Doe").toString()
-        const userEmail = data?.user?.email || "jane@example.com"
-        setName(rawName)
-        setEmail(userEmail)
-      } catch {
-        // demo fallback
-      }
-    }
-    init()
-  }, [])
-
-  // Track dirtiness
-  React.useEffect(() => {
-    setDirty(true)
-  }, [prefThemeDark, notificationsOn])
-
-  const onSave = async () => {
-    try {
-      // Apply and persist theme immediately
-      setTheme(prefThemeDark ? "dark" : "light")
-
-      // Persist notifications via settings store (and optionally localStorage)
-      updateSettings({ emailNotificationsEnabled: notificationsOn })
-      if (typeof window !== "undefined") {
-        localStorage.setItem("crm:notificationsOn", JSON.stringify(notificationsOn))
-      }
-
-      setDirty(false)
-      toast({ title: "Settings saved", description: "Your preferences have been updated." })
-    } catch (e: any) {
-      toast({ title: "Unable to save", description: e?.message || "Please try again.", variant: "destructive" })
-    }
-  }
-
-  const onChangePassword = async () => {
-    if (!supabaseConfigured) {
-      toast({ title: "Demo mode", description: "Password change is disabled in demo mode." })
+  const handleNavigate = (key: AppNavKey) => {
+    if (key === "settings") return
+    if (key === "today") {
+      router.push(isPreview ? "/dashboard?preview=1" : "/dashboard")
       return
     }
-    try {
-      const supabase = getSupabaseBrowserClient()
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: typeof window !== "undefined" ? `${window.location.origin}/auth/update-password` : undefined,
-      })
-      toast({ title: "Email sent", description: "Check your inbox for the password reset link." })
-    } catch (e: any) {
-      toast({ title: "Error", description: e?.message || "Could not send reset email.", variant: "destructive" })
-    }
+
+    const params = new URLSearchParams()
+    params.set("tab", key)
+    if (isPreview) params.set("preview", "1")
+    router.push(`/dashboard?${params.toString()}`)
   }
 
-  const onDeleteAccount = async () => {
-    if (!supabaseConfigured) {
-      toast({ title: "Demo mode", description: "Account deletion is disabled in demo mode." })
-      return
-    }
-    if (!confirm("Are you sure you want to delete your account? This action cannot be undone.")) return
-    try {
-      const supabase = getSupabaseBrowserClient()
-      const { data: sess } = await supabase.auth.getSession()
-      const token = sess.session?.access_token
-      const res = await fetch("/api/account/delete", {
-        method: "POST",
-        headers: {
-          Authorization: token ? `Bearer ${token}` : "",
-        },
-      })
-      if (!res.ok) {
-        const text = await res.text()
-        throw new Error(text || `Failed with ${res.status}`)
-      }
-      await supabase.auth.signOut()
-      toast({ title: "Account deleted", description: "Your account has been removed." })
-      router.replace("/")
-    } catch (e: any) {
-      toast({ title: "Deletion failed", description: e?.message || "Please try again.", variant: "destructive" })
-    }
+  if (loading && !isPreview) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="page-shell grid min-h-screen place-items-center py-16">
+          <Card className="card-primary w-full max-w-md">
+            <div className="flex flex-col gap-3 p-8 text-center">
+              <p className="section-label m-0 mx-auto">Loading</p>
+              <h1 className="font-sans text-2xl font-semibold tracking-[-0.04em]">Preparing your workspace settings</h1>
+              <p className="text-sm leading-6 text-muted-foreground">Checking your session and restoring the preferences for this workspace.</p>
+            </div>
+          </Card>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <SidebarInset>
-      {/* Navy top bar with sidebar trigger */}
-      <div className="border-b bg-slate-900 text-white">
-        <div className="flex h-16 items-center px-4">
-          <SidebarTrigger className="-ml-1 mr-2" />
-          <div className="flex items-center space-x-3">
-            <Users className="h-6 w-6" />
-            <h1 className="text-xl font-semibold tracking-wide">Settings</h1>
+    <AppChrome
+      active="settings"
+      onNavigate={handleNavigate}
+      sectionLabel={isPreview ? "Preview workspace" : userName}
+      title="Settings"
+      description="Workspace controls, reminder behavior, and account details in one calmer view."
+      userName={userName}
+      userEmail={userEmail}
+      isPreview={isPreview}
+      status={
+        <p>{settings.orderTrackingEnabled ? "Orders enabled." : "Orders off."} {settings.emailNotificationsEnabled ? "Email reminders active." : "Reminders stay in-app."}</p>
+      }
+      actions={
+        <>
+          <Button variant="outline" asChild>
+            <Link href={isPreview ? "/dashboard?preview=1" : "/dashboard"}>Back to workspace</Link>
+          </Button>
+          <Button asChild>
+            <Link href="/demo">Open demo</Link>
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <div className="overflow-hidden border-t border-border">
+          <div className="border-b border-border px-5 py-4">
+            <p className="ui-kicker">Workspace controls</p>
+            <h2 className="mt-1 font-sans text-lg font-semibold text-foreground">Core behavior</h2>
           </div>
-          <div className="ml-auto" />
+          <div className="space-y-3 p-4">
+            <SettingRow
+              icon={Package2}
+              title="Order tracking"
+              description="Keep orders available as an optional module. Turn them on only when you need revenue pulse and purchase history."
+              control={
+                <Switch
+                  checked={settings.orderTrackingEnabled}
+                  onCheckedChange={(checked) => updateSettings({ orderTrackingEnabled: checked })}
+                  aria-label="Toggle order tracking"
+                />
+              }
+            />
+            <SettingRow
+              icon={BellDot}
+              title="Email reminders"
+              description="Enable reminder emails for future follow-ups so important client touches do not slip."
+              control={
+                <Switch
+                  checked={settings.emailNotificationsEnabled}
+                  onCheckedChange={(checked) => updateSettings({ emailNotificationsEnabled: checked })}
+                  aria-label="Toggle email notifications"
+                />
+              }
+            />
+            <div className="border-t border-border pt-4">
+              <p className="ui-kicker">Preference summary</p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Orders</p>
+                  <p className="ui-meta mt-1">{settings.orderTrackingEnabled ? "Enabled and visible across the workspace." : "Off until you actively need it."}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Reminders</p>
+                  <p className="ui-meta mt-1">{settings.emailNotificationsEnabled ? "Email task reminders are active." : "Reminders stay inside the app only."}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Content: white background, light gray dividers; dark equivalents via dark: classes */}
-      <div className="bg-white dark:bg-neutral-900">
-        <div className="mx-auto w-full max-w-3xl px-4 py-6 md:py-8">
-          <div className="divide-y divide-gray-200 dark:divide-neutral-800">
-            {/* Profile */}
-            <Section title="Profile" description="Manage your personal information and account security.">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" value={name} readOnly aria-readonly className="bg-muted/30" />
-                  <p className="text-xs text-muted-foreground">Name is managed via your authentication provider.</p>
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} readOnly aria-readonly className="bg-muted/30" />
-                </div>
+        <div className="grid gap-4">
+          <div className="overflow-hidden border-t border-border">
+            <div className="border-b border-border px-5 py-4">
+              <p className="ui-kicker">Account</p>
+              <h2 className="mt-1 font-sans text-lg font-semibold text-foreground">Who this workspace belongs to</h2>
+            </div>
+            <div className="space-y-3 p-4">
+              <div className="border-b border-border pb-3">
+                <Label className="ui-kicker">Name</Label>
+                <p className="mt-2 text-sm font-medium text-foreground">{userName}</p>
               </div>
-              <div className="mt-4">
-                <Button variant="outline" onClick={onChangePassword} disabled={!supabaseConfigured}>
-                  Change password
-                </Button>
-                {!supabaseConfigured && <p className="mt-2 text-xs text-muted-foreground">Disabled in demo mode.</p>}
+              <div className="border-b border-border pb-3">
+                <Label className="ui-kicker">Email</Label>
+                <p className="mt-2 text-sm font-medium text-foreground">{userEmail || "Preview workspace"}</p>
               </div>
-            </Section>
+              <Button variant="outline" className="w-full" onClick={signOut}>
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
+            </div>
+          </div>
 
-            {/* Preferences */}
-            <Section title="Preferences" description="Light/dark theme and notifications.">
-              <div className="grid grid-cols-1 gap-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="pref-theme" className="font-medium">
-                      Theme
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Switch between Light and Dark mode.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">Light</span>
-                    <Switch
-                      id="pref-theme"
-                      checked={prefThemeDark}
-                      onCheckedChange={(checked) => {
-                        setPrefThemeDark(checked)
-                        setTheme(checked ? "dark" : "light")
-                      }}
-                      aria-label="Toggle dark mode"
-                    />
-                    <span className="text-sm">Dark</span>
-                  </div>
-                </div>
+          <div className="overflow-hidden border-t border-border">
+            <div className="border-b border-border px-5 py-4">
+              <p className="ui-kicker">Fast paths</p>
+              <h2 className="mt-1 font-sans text-lg font-semibold text-foreground">Secondary links</h2>
+            </div>
+            <div className="space-y-2 p-3">
+              <FastPath href="/" title="Home" body="Return to the simpler public product story." />
+              <FastPath href="/demo" title="Guided demo" body="Walk the sample workspace without touching your live data." />
+              <FastPath href="/support" title="Support" body="Get help, report issues, or ask for setup guidance." />
+            </div>
+          </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="pref-notifications" className="font-medium">
-                      Notifications
-                    </Label>
-                    <p className="text-sm text-muted-foreground">Receive email updates about your tasks.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm">Off</span>
-                    <Switch
-                      id="pref-notifications"
-                      checked={notificationsOn}
-                      onCheckedChange={setNotificationsOn}
-                      aria-label="Toggle notifications"
-                    />
-                    <span className="text-sm">On</span>
-                  </div>
-                </div>
+          <div className="border-t border-border pt-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-primary" />
+                <p className="ui-kicker">Workspace posture</p>
               </div>
-            </Section>
-
-            {/* Data */}
-            <Section title="Data" description="Import clients and export your data.">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button variant="outline" onClick={() => setOpenImport(true)} aria-label="Import clients CSV">
-                  Import clients (CSV)
-                </Button>
-                <Button onClick={() => setOpenExport(true)} aria-label="Export all data">
-                  Export all data
-                </Button>
-              </div>
-              <ImportDialog open={openImport} onOpenChange={setOpenImport} />
-              <ExportDialog
-                open={openExport}
-                onOpenChange={setOpenExport}
-                clients={clients}
-                orders={orders}
-                orderTrackingEnabled={true}
-              />
-            </Section>
-
-            {/* Danger Zone */}
-            <Section title="Danger Zone" description="These actions are permanent and cannot be undone.">
-              <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
-                <div className="flex items-start gap-3">
-                  <ShieldAlert className="h-5 w-5 mt-0.5" />
-                  <div className="flex-1">
-                    <h3 className="font-medium">Delete account</h3>
-                    <p className="text-sm opacity-90">This will permanently remove your account and associated data.</p>
-                    <div className="mt-3">
-                      <Button variant="destructive" onClick={onDeleteAccount} disabled={!supabaseConfigured}>
-                        Delete account
-                      </Button>
-                      {!supabaseConfigured && <p className="mt-2 text-xs opacity-80">Disabled in demo mode.</p>}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Section>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                CLIENTIVE stays focused on one solo-service workspace: clear follow-ups, visible relationships, and orders only when the business actually needs them.
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Save button fixed at bottom-right */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button onClick={onSave} disabled={!dirty} aria-label="Save changes">
-          Save changes
-        </Button>
-      </div>
-    </SidebarInset>
+    </AppChrome>
   )
 }
 
-export default function SettingsPage() {
-  const router = useRouter()
-
-  // Sidebar navigation handler
-  const handleNavigate = (key: "overview" | "clients" | "tasks" | "orders" | "settings") => {
-    if (key === "settings") return
-    if (key === "overview") {
-      router.push("/dashboard#overview")
-      return
-    }
-    const tabMap: Record<string, string> = { clients: "clients", tasks: "tasks", orders: "orders" }
-    const tab = tabMap[key] || "clients"
-    router.push(`/dashboard?tab=${encodeURIComponent(tab)}`)
-  }
-
+function SettingRow({
+  icon: Icon,
+  title,
+  description,
+  control,
+}: {
+  icon: typeof Settings2
+  title: string
+  description: string
+  control: React.ReactNode
+}) {
   return (
-    <PersistentSidebarProvider>
-      <AppSidebar active="settings" onNavigate={handleNavigate} />
-      <SettingsProvider>
-        <OrdersProvider>
-          <ClientsProvider>
-            <SettingsContent />
-          </ClientsProvider>
-        </OrdersProvider>
-      </SettingsProvider>
-    </PersistentSidebarProvider>
+    <div className="flex items-start justify-between gap-4 border-b border-border pb-4">
+      <div className="flex items-start gap-3">
+        <div className="grid h-9 w-9 place-items-center rounded-[12px] bg-primary/10 text-primary">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-foreground">{title}</p>
+          <p className="ui-meta mt-1 max-w-xl">{description}</p>
+        </div>
+      </div>
+      <div className="pt-1">{control}</div>
+    </div>
+  )
+}
+
+function FastPath({ href, title, body }: { href: string; title: string; body: string }) {
+  return (
+    <Link href={href} className="flex items-center justify-between border-b border-border px-1 py-3 transition-colors hover:text-foreground">
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        <p className="ui-meta mt-1">{body}</p>
+      </div>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  )
+}
+
+export default function DashboardSettingsPage() {
+  return (
+    <SettingsProvider>
+      <SettingsContent />
+    </SettingsProvider>
   )
 }

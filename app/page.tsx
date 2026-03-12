@@ -1,106 +1,92 @@
 import Link from "next/link"
+import { ArrowRight } from "lucide-react"
+import { HomeWorkspacePreview } from "@/components/home-workspace-preview"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
 import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Users, CalendarClock, Database } from "lucide-react"
 
 export const metadata = {
-  title: "CLIENTIVE — Simple CRM for Small Business",
-  description: "Manage clients, follow-ups, and orders with a lightweight, responsive CRM.",
+  title: "Run client work without a bloated CRM",
+  description: "CLIENTIVE helps solo service businesses keep client notes, follow-ups, and optional orders in one calm workspace.",
 }
+
+const operatingPoints = [
+  {
+    title: "Clients stay visible",
+    body: "See who is active, who needs a touch, and what context matters before you reply.",
+  },
+  {
+    title: "Follow-ups stay moving",
+    body: "Keep overdue work, today’s queue, and next actions in one place instead of scattered reminders.",
+  },
+  {
+    title: "Orders stay optional",
+    body: "Track simple delivery and revenue context only when the business needs it.",
+  },
+]
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white dark:bg-neutral-950">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between font-mono">
-          <Link href="/" className="flex items-center gap-2">
-            <img src="/brand/logo-mark.png" alt="AVD Clientive logo" className="h-8 w-8" />
-            <span className="font-semibold text-xl text-slate-900">CLIENTIVE</span>
-          </Link>
+    <>
+      <SiteHeader />
+      <main className="page-shell">
+        <section className="section-wrap relative py-14 md:py-20 lg:py-24">
+          <div className="hero-orb left-[-8rem] top-20 h-56 w-56 bg-primary/30" />
+          <div className="hero-orb right-[-4rem] top-10 h-52 w-52 bg-amber-200/60" />
 
-          <nav className="hidden md:flex items-center gap-6 text-slate-700">
-            <Link href="/features" className="hover:text-slate-900">
-              Features
-            </Link>
-            <Link href="/support" className="hover:text-slate-900">
-              Support
-            </Link>
-            <Link href="/auth/sign-in" className="inline-flex">
-              <Button variant="outline" className="border-orange-500 text-orange-600 hover:bg-orange-50 bg-transparent">
-                Login
-              </Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+          <div className="grid items-start gap-10 lg:grid-cols-[0.58fr_0.42fr] lg:gap-12 xl:grid-cols-[0.56fr_0.44fr]">
+            <div className="relative z-10 max-w-3xl space-y-8 pt-2">
+              <span className="section-label">For solo service businesses</span>
 
-      {/* Hero */}
-      <section className="border-b border-slate-200 dark:border-slate-800 bg-gradient-to-b from-orange-50/60 to-white dark:from-orange-900/10 dark:to-neutral-950">
-        <div className="mx-auto max-w-6xl px-4 py-16 md:py-24 font-mono">
-          <div className="max-w-3xl">
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-slate-900 dark:text-white font-mono">
-              Manage Clients, Tasks, and Orders in One Place
-            </h1>
-            <p className="mt-4 text-slate-600 dark:text-slate-300 font-mono">
-              A lightweight CRM to keep your relationships warm and your follow-ups on time. Fully responsive and easy
-              to use.
-            </p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Button className="h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white" asChild>
-                <Link href="/auth/sign-up">Get Started</Link>
-              </Button>
-              <Button variant="outline" className="h-11 rounded-xl bg-transparent" asChild>
-                <Link href="/dashboard?preview=1">Try the demo</Link>
-              </Button>
+              <div className="space-y-5">
+                <h1 className="max-w-[12ch] font-semibold leading-[0.95] tracking-[-0.048em] text-foreground text-[3rem] sm:text-[4rem] lg:text-[4.25rem] xl:text-[4.7rem]">
+                  Run client work without a bloated CRM.
+                </h1>
+                <p className="max-w-xl text-[1.02rem] leading-8 text-muted-foreground">
+                  Clientive helps solo service businesses keep track of client notes, next actions, and light order
+                  tracking without juggling spreadsheets, reminders, and a full CRM.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Button size="lg" asChild>
+                  <Link href="/auth/sign-up">
+                    Start free
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+
+              <div className="grid gap-3 border-t border-border pt-5 md:grid-cols-3">
+                {[
+                  ["Clear client history", "Notes, stage, and recent touchpoints stay close to the work."],
+                  ["Daily follow-up queue", "Overdue and due-today items stay visible without extra setup."],
+                  ["Optional order view", "Revenue context is there when needed and quiet when it is not."],
+                ].map(([title, copy]) => (
+                  <div key={title} className="border-l border-border pl-4">
+                    <div className="text-sm font-semibold">{title}</div>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">{copy}</p>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            <HomeWorkspacePreview className="relative z-10 lg:mt-2" />
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Features Summary */}
-      <section className="mx-auto max-w-6xl px-4 py-12 md:py-16 font-mono">
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <Card className="p-6 border-slate-200 dark:border-slate-800">
-            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-neutral-900 dark:text-white">
-              <Users className="h-5 w-5" aria-hidden="true" />
-              <span className="sr-only">Client Management</span>
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Simple Client Management</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mt-2">
-              Add, edit, and search clients. Keep all notes and details together.
-            </p>
-          </Card>
-
-          <Card className="p-6 border-slate-200 dark:border-slate-800">
-            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-neutral-900 dark:text-white">
-              <CalendarClock className="h-5 w-5" aria-hidden="true" />
-              <span className="sr-only">Smart Follow-Ups</span>
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Smart Follow-Ups</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mt-2">
-              Create tasks, enable email reminders, and sync to your calendar.
-            </p>
-          </Card>
-
-          <Card className="p-6 border-slate-200 dark:border-slate-800">
-            <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-neutral-900 dark:text-white">
-              <Database className="h-5 w-5" aria-hidden="true" />
-              <span className="sr-only">Own Your Data</span>
-            </div>
-            <h3 className="font-semibold text-slate-900 dark:text-white">Own Your Data</h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm mt-2">
-              Import and export anytime. Your data stays yours.
-            </p>
-          </Card>
-        </div>
-
-        <div className="mt-10 text-center">
-          <Button className="h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white" asChild>
-            <Link href="/features">Explore all features</Link>
-          </Button>
-        </div>
-      </section>
-    </main>
+        <section className="section-wrap py-6 md:py-10">
+          <div className="grid gap-6 border-t border-border pt-8 md:grid-cols-3 md:gap-8">
+            {operatingPoints.map((item) => (
+              <div key={item.title} className="space-y-3">
+                <h2 className="font-sans text-xl font-semibold text-foreground">{item.title}</h2>
+                <p className="max-w-sm text-sm leading-6 text-muted-foreground">{item.body}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
+      <SiteFooter />
+    </>
   )
 }

@@ -8,13 +8,16 @@ function isOwnerColumnMissing(err: any) {
   return msg.includes("owner_id") && msg.includes("does not exist")
 }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+type RouteContext = { params: Promise<{ id: string }> }
+
+export async function PATCH(request: Request, { params }: RouteContext) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const supabase = getSupabaseRLSClient(request)
     const body = await request.json()
+    const { id } = await params
 
     const updates: any = {}
     if ("clientId" in body) updates.client_id = body.clientId
@@ -27,7 +30,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     let { data, error } = await supabase
       .from("orders")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("owner_id", user.id)
       .select("*")
       .single()
@@ -38,13 +41,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: RouteContext) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const supabase = getSupabaseRLSClient(request)
-    const { error } = await supabase.from("orders").delete().eq("id", params.id).eq("owner_id", user.id)
+    const { id } = await params
+    const { error } = await supabase.from("orders").delete().eq("id", id).eq("owner_id", user.id)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {

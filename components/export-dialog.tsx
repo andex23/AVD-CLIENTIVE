@@ -165,7 +165,7 @@ export function ExportDialog({ open, onOpenChange, clients, orders, orderTrackin
 
           {orderTrackingEnabled && orders.length > 0 && (
             <div className="flex items-center space-x-2">
-              <Checkbox id="include-orders" checked={includeOrders} onCheckedChange={setIncludeOrders} />
+              <Checkbox id="include-orders" checked={includeOrders} onCheckedChange={(checked) => setIncludeOrders(Boolean(checked))} />
               <Label htmlFor="include-orders">Include order data ({orders.length} orders)</Label>
             </div>
           )}

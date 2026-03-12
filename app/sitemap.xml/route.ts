@@ -7,7 +7,7 @@ function getBaseUrl(req: Request) {
 
 const ROUTES: Array<{ path: string; priority?: number; changefreq?: string }> = [
   { path: "/", priority: 1.0, changefreq: "weekly" },
-  { path: "/features", priority: 0.8, changefreq: "monthly" },
+  { path: "/demo", priority: 0.9, changefreq: "weekly" },
   { path: "/support", priority: 0.6, changefreq: "monthly" },
   { path: "/auth/sign-in", priority: 0.4, changefreq: "yearly" },
   { path: "/auth/sign-up", priority: 0.4, changefreq: "yearly" },

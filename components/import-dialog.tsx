@@ -243,7 +243,7 @@ export function ImportDialog({ open, onOpenChange }: ImportDialogProps) {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Checkbox id="headers" checked={hasHeaders} onCheckedChange={setHasHeaders} />
+              <Checkbox id="headers" checked={hasHeaders} onCheckedChange={(checked) => setHasHeaders(Boolean(checked))} />
               <Label htmlFor="headers" className="text-sm">
                 First row contains column headers
               </Label>

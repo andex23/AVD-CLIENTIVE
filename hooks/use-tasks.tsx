@@ -4,6 +4,7 @@ import * as React from "react"
 import type { Task } from "@/types/task"
 import { apiFetch } from "@/lib/api-client"
 import { safeDate } from "@/lib/date"
+import { demoTasks } from "@/lib/demo-data"
 
 type TasksContextValue = {
   tasks: Task[]
@@ -17,6 +18,27 @@ type TasksContextValue = {
 
 const TasksContext = React.createContext<TasksContextValue | null>(null)
 
+const STORAGE_KEY = "crm:tasks"
+
+function loadLocalTasks(isPreview: boolean): Task[] {
+  try {
+    const raw = typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null
+    if (!raw) return isPreview ? demoTasks : []
+    const parsed = JSON.parse(raw) as Task[]
+    return Array.isArray(parsed) ? parsed : isPreview ? demoTasks : []
+  } catch {
+    return isPreview ? demoTasks : []
+  }
+}
+
+function saveLocalTasks(tasks: Task[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks))
+  } catch {
+    // ignore
+  }
+}
+
 export function TasksProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = React.useState<Task[]>([])
 
@@ -25,9 +47,12 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
       try {
         const { tasks } = await apiFetch<{ tasks: Task[] }>("/api/tasks")
         setTasks(tasks)
+        saveLocalTasks(tasks)
       } catch (e) {
-        console.warn("Tasks load failed; starting empty until auth is configured.", e)
-        setTasks([])
+        const isPreview =
+          typeof window !== "undefined" && new URLSearchParams(window.location.search).get("preview") === "1"
+        console.warn("Tasks load failed; using local data.", e)
+        setTasks(loadLocalTasks(isPreview))
       }
     }
     load()
@@ -39,10 +64,19 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         body: JSON.stringify(taskData),
       })
-      setTasks((prev) => [task, ...prev])
+      setTasks((prev) => {
+        const next = [task, ...prev]
+        saveLocalTasks(next)
+        return next
+      })
     } catch (e) {
-      console.error("Failed to add task:", e)
-      // Optional: local fallback could be added here similar to clients
+      const localTask: Task = { ...taskData, id: `local-${Date.now()}` }
+      setTasks((prev) => {
+        const next = [localTask, ...prev]
+        saveLocalTasks(next)
+        return next
+      })
+      console.error("Failed to add task (saved locally):", e)
     }
   }, [])
 
@@ -52,18 +86,36 @@ export function TasksProvider({ children }: { children: React.ReactNode }) {
         method: "PATCH",
         body: JSON.stringify(updates),
       })
-      setTasks((prev) => prev.map((t) => (t.id === id ? task : t)))
+      setTasks((prev) => {
+        const next = prev.map((t) => (t.id === id ? task : t))
+        saveLocalTasks(next)
+        return next
+      })
     } catch (e) {
-      console.error("Failed to update task:", e)
+      setTasks((prev) => {
+        const next = prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+        saveLocalTasks(next)
+        return next
+      })
+      console.error("Failed to update task (saved locally):", e)
     }
   }, [])
 
   const deleteTask = React.useCallback(async (id: string) => {
     try {
       await apiFetch(`/api/tasks/${id}`, { method: "DELETE" })
-      setTasks((prev) => prev.filter((t) => t.id !== id))
+      setTasks((prev) => {
+        const next = prev.filter((t) => t.id !== id)
+        saveLocalTasks(next)
+        return next
+      })
     } catch (e) {
-      console.error("Failed to delete task:", e)
+      setTasks((prev) => {
+        const next = prev.filter((t) => t.id !== id)
+        saveLocalTasks(next)
+        return next
+      })
+      console.error("Failed to delete task (removed locally):", e)
     }
   }, [])
 

@@ -1,54 +1,37 @@
-import type React from "react"
 import Link from "next/link"
+import { BrandLockup } from "@/components/brand"
+
+const footerNav = [
+  { href: "/", label: "Home" },
+  { href: "/demo", label: "Demo" },
+  { href: "/support", label: "Support" },
+  { href: "/auth/sign-in", label: "Log in" },
+]
 
 export function SiteFooter() {
   return (
-    <footer className="w-full border-t border-neutral-200/80 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="mx-auto max-w-6xl px-4">
-        <div className="flex h-16 items-center justify-between gap-4 font-mono">
-          {/* Left: AVD logo in orange circle */}
-          <Link href="/" aria-label="AVD Clientive Home" className="flex items-center gap-2">
-            <span
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#F35A1F] text-[11px] font-bold leading-none text-white"
-              aria-hidden="true"
-              title="AVD"
-            >
-              AVD
-            </span>
-          </Link>
+    <footer className="mt-20 border-t border-border bg-[linear-gradient(180deg,hsl(var(--surface-soft)),hsl(var(--surface-ivory)))]">
+      <div className="section-wrap py-8">
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-3">
+            <BrandLockup />
+            <p className="max-w-xl text-sm leading-7 text-muted-foreground">
+              CLIENTIVE keeps client notes, next actions, and optional orders in one calm workspace.
+            </p>
+          </div>
 
-          {/* Center: Links with dot separators */}
-          <nav
-            aria-label="Footer navigation"
-            className="flex items-center gap-3 text-sm text-neutral-600 dark:text-neutral-300"
-          >
-            <FooterLink href="/">Home</FooterLink>
-            <SeparatorDot />
-            <FooterLink href="/features">Features</FooterLink>
-            <SeparatorDot />
-            <FooterLink href="/support">Support</FooterLink>
-          </nav>
-
-          {/* Right: Copyright */}
-          <div className="text-xs text-neutral-500 dark:text-neutral-400">{"© 2025 AVD Clientive"}</div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            {footerNav.map((item) => (
+              <Link key={item.href} href={item.href} className="text-sm font-medium text-muted-foreground hover:text-foreground">
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div className="mt-6 border-t border-border pt-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          © 2026 CLIENTIVE
         </div>
       </div>
     </footer>
-  )
-}
-
-function FooterLink(props: { href: string; children: React.ReactNode }) {
-  return (
-    <Link href={props.href} className="transition-colors hover:underline underline-offset-4 decoration-neutral-400/60">
-      {props.children}
-    </Link>
-  )
-}
-
-function SeparatorDot() {
-  return (
-    <span aria-hidden="true" className="text-neutral-400 dark:text-neutral-500">
-      {"•"}
-    </span>
   )
 }

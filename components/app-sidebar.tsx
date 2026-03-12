@@ -1,7 +1,9 @@
 "use client"
 
 import type * as React from "react"
-import { LayoutDashboard, Users, ClipboardList, Package, Settings } from "lucide-react"
+import Link from "next/link"
+import { ArrowUpRight, Home, ListTodo, Settings2, Sparkles, Users, Package2 } from "lucide-react"
+import { BrandMark, BrandWordmark } from "@/components/brand"
 
 import {
   Sidebar,
@@ -11,44 +13,47 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
-  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
 
-type NavKey = "overview" | "clients" | "tasks" | "orders" | "settings"
+export type AppNavKey = "today" | "clients" | "tasks" | "orders" | "settings"
 
 const NAV_ITEMS: Array<{
-  key: NavKey
+  key: AppNavKey
   title: string
   icon: React.ComponentType<{ className?: string }>
-  tooltip?: string
 }> = [
-  { key: "overview", title: "Overview", icon: LayoutDashboard, tooltip: "Overview" },
-  { key: "clients", title: "Clients", icon: Users, tooltip: "Clients" },
-  { key: "tasks", title: "Tasks & Follow-ups", icon: ClipboardList, tooltip: "Tasks" },
-  { key: "orders", title: "Orders", icon: Package, tooltip: "Orders" },
-  { key: "settings", title: "Settings", icon: Settings, tooltip: "Settings" },
+  { key: "today", title: "Today", icon: Sparkles },
+  { key: "clients", title: "Clients", icon: Users },
+  { key: "tasks", title: "Tasks", icon: ListTodo },
+  { key: "orders", title: "Orders", icon: Package2 },
+  { key: "settings", title: "Settings", icon: Settings2 },
 ]
 
 export function AppSidebar({
-  active = "clients",
+  active = "today",
   onNavigate,
   ...props
 }: {
-  active?: NavKey
-  onNavigate?: (key: NavKey) => void
+  active?: AppNavKey
+  onNavigate?: (key: AppNavKey) => void
 } & React.ComponentProps<typeof Sidebar>) {
   return (
-    <Sidebar side="left" collapsible="icon" {...props}>
-      <SidebarHeader className="px-2">
-        <SidebarInput placeholder="Search..." aria-label="Sidebar quick search" />
+    <Sidebar side="left" variant="floating" collapsible="icon" {...props}>
+      <SidebarHeader className="gap-3 px-2.5 py-3.5">
+        <Link href="/" className="flex items-center gap-3 px-1 py-1 transition-colors hover:text-sidebar-foreground">
+          <BrandMark className="h-9 w-9 shrink-0 rounded-[14px]" />
+          <BrandWordmark className="min-w-0 text-sm tracking-[0.18em] text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
+        </Link>
       </SidebarHeader>
+      <SidebarSeparator />
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <nav aria-label="Primary">
               <SidebarMenu>
@@ -60,7 +65,7 @@ export function AppSidebar({
                       <SidebarMenuButton
                         asChild
                         isActive={isActive}
-                        tooltip={item.tooltip}
+                        tooltip={item.title}
                         aria-current={isActive ? "page" : undefined}
                       >
                         <button
@@ -80,10 +85,30 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="text-xs text-muted-foreground px-2 pb-2">
-        <div aria-hidden="true">Press Ctrl/Cmd + B to toggle</div>
+      <SidebarFooter className="px-2.5 pb-3.5">
+        <div className="border-t border-sidebar-border/80 pt-3 group-data-[collapsible=icon]:hidden">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">Public pages</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Link
+              href="/demo"
+              className="inline-flex items-center gap-2 text-[11px] font-semibold text-sidebar-foreground"
+            >
+              Open demo
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-[11px] font-semibold text-sidebar-foreground/68"
+            >
+              Home
+              <Home className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+        <div className="px-1 pt-1 text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/35 group-data-[collapsible=icon]:hidden">
+          Press Ctrl/Cmd + B to toggle
+        </div>
       </SidebarFooter>
-      {/* Rail enables click-to-collapse/expand on desktop */}
       <SidebarRail />
     </Sidebar>
   )

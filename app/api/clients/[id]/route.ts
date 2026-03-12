@@ -3,25 +3,16 @@ import { toFriendlyError } from "@/lib/errors"
 import { getSupabaseRLSClient } from "@/lib/supabase/rls-server"
 import { requireUser } from "@/lib/auth"
 
-async function hasOwnerColumn(): Promise<boolean> {
-  const supabase = getSupabaseAdmin()
-  const { data } = await supabase
-    .from("information_schema.columns")
-    .select("column_name")
-    .eq("table_schema", "public")
-    .eq("table_name", "clients")
-    .eq("column_name", "owner_id")
-    .maybeSingle()
-  return Boolean(data)
-}
+type RouteContext = { params: Promise<{ id: string }> }
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, { params }: RouteContext) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const supabase = getSupabaseRLSClient(request)
     const body = await request.json()
+    const { id } = await params
 
     const updates: any = {}
     if ("name" in body) updates.name = body.name
@@ -37,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const { data, error } = await supabase
       .from("clients")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("owner_id", user.id)
       .select("*")
       .single()
@@ -48,13 +39,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: RouteContext) {
   const { user } = await requireUser(request)
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   try {
     const supabase = getSupabaseRLSClient(request)
-    const { error } = await supabase.from("clients").delete().eq("id", params.id).eq("owner_id", user.id)
+    const { id } = await params
+    const { error } = await supabase.from("clients").delete().eq("id", id).eq("owner_id", user.id)
     if (error) throw error
     return NextResponse.json({ ok: true })
   } catch (err: any) {

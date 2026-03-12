@@ -1,432 +1,677 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Plus, Search, Filter, Download, Upload, Users, Calendar, Bell, Clock, LogOut, Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Switch } from "@/components/ui/switch"
-import { Label } from "@/components/ui/label"
-import { ClientList } from "@/components/client-list"
-import { TaskList } from "@/components/task-list"
-import { OrderList } from "@/components/order-list"
-import RecentActivity from "@/components/recent-activity"
+import type React from "react"
+import { type ComponentType, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
+import {
+  ArrowRight,
+  BellDot,
+  CalendarClock,
+  CheckCircle2,
+  CircleAlert,
+  Download,
+  ListTodo,
+  Mail,
+  MessageCircle,
+  Package2,
+  PhoneCall,
+  Plus,
+  TrendingUp,
+  UserPlus,
+  Users,
+} from "lucide-react"
 import { AddClientDialog } from "@/components/add-client-dialog"
-import { ImportDialog } from "@/components/import-dialog"
-import { AddTaskDialog } from "@/components/add-task-dialog"
 import { AddOrderDialog } from "@/components/add-order-dialog"
+import { AddTaskDialog } from "@/components/add-task-dialog"
+import { AppChrome } from "@/components/app-chrome"
+import type { AppNavKey } from "@/components/app-sidebar"
+import { ClientList } from "@/components/client-list"
 import { ExportDialog } from "@/components/export-dialog"
-import { FilterDialog } from "@/components/filter-dialog"
-
+import { ImportDialog } from "@/components/import-dialog"
+import { OrderList } from "@/components/order-list"
+import { TaskList } from "@/components/task-list"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { useAppSession } from "@/hooks/use-app-session"
 import { ClientsProvider, useClients } from "@/hooks/use-clients"
-import { TasksProvider, useTasks } from "@/hooks/use-tasks"
 import { OrdersProvider, useOrders } from "@/hooks/use-orders"
 import { SettingsProvider, useSettings } from "@/hooks/use-settings"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar"
+import { TasksProvider, useTasks } from "@/hooks/use-tasks"
+import { formatDateShort, formatTimeHM, isOverdue, isToday, safeDate, timeAgo } from "@/lib/date"
+import { formatEnumLabel, getClientAttentionState } from "@/lib/workspace-ui"
+import type { Client } from "@/types/client"
 
-type NavKey = "overview" | "clients" | "tasks" | "orders" | "settings"
+type WorkspaceTab = "today" | "clients" | "tasks" | "orders"
 
-function DashboardInner({
-  tab,
-  setTab,
+function parseTab(value: string | null): WorkspaceTab {
+  if (value === "clients" || value === "tasks" || value === "orders" || value === "today") return value
+  return "today"
+}
+
+function getFirstName(name: string) {
+  const trimmed = name.trim()
+  if (!trimmed || trimmed.toLowerCase() === "preview workspace") return ""
+  return trimmed.split(/\s+/)[0] || ""
+}
+
+function getTimeGreeting(date: Date) {
+  const hour = date.getHours()
+  if (hour < 12) return "Good morning"
+  if (hour < 17) return "Good afternoon"
+  if (hour < 22) return "Good evening"
+  return "Working late"
+}
+
+function openWhatsApp(client: Client) {
+  if (!client.phone) return
+  const whatsappUrl = `https://wa.me/${client.phone.replace(/\D/g, "")}?text=Hi ${client.name}, `
+  window.open(whatsappUrl, "_blank", "noopener,noreferrer")
+}
+
+function callClient(client: Client) {
+  if (!client.phone) return
+  window.open(`tel:${client.phone}`, "_self")
+}
+
+function emailClient(client: Client) {
+  window.open(`mailto:${client.email}?subject=Follow up&body=Hi ${client.name},%0D%0A%0D%0A`, "_self")
+}
+
+function DashboardWorkspace({
+  active,
+  setActive,
 }: {
-  tab: "clients" | "tasks" | "orders"
-  setTab: (t: "clients" | "tasks" | "orders") => void
+  active: WorkspaceTab
+  setActive: (tab: WorkspaceTab) => void
 }) {
   const router = useRouter()
-  const { toggleSidebar } = useSidebar()
-  const [searchQuery, setSearchQuery] = useState("")
+  const searchParams = useSearchParams()
+  const { loading, userName, userEmail, isPreview } = useAppSession()
   const [showAddClient, setShowAddClient] = useState(false)
   const [showImportClients, setShowImportClients] = useState(false)
   const [showAddTask, setShowAddTask] = useState(false)
   const [showAddOrder, setShowAddOrder] = useState(false)
   const [showExport, setShowExport] = useState(false)
-  const [showFilter, setShowFilter] = useState(false)
 
-  const [userName, setUserName] = useState("Jane")
-  const [isFirstVisit, setIsFirstVisit] = useState(true)
-
-  const { clients, filteredClients, searchClients, filterClients, recentClients } = useClients()
+  const { clients, recentClients } = useClients()
   const { tasks, todaysTasks, upcomingTasks } = useTasks()
   const { orders, inactiveClients } = useOrders()
-  const { settings, updateSettings } = useSettings()
-
-  const signOut = async () => {
-    try {
-      const supabase = getSupabaseBrowserClient()
-      await supabase.auth.signOut()
-    } catch {
-      // ignore
-    } finally {
-      try {
-        localStorage.removeItem("crm:userName")
-      } catch {}
-      router.replace("/auth/sign-in")
-    }
-  }
+  const { settings } = useSettings()
 
   useEffect(() => {
-    searchClients(searchQuery)
-  }, [searchQuery, searchClients])
-
-  // Listen for global CTAs from inner components (empty states)
-  useEffect(() => {
+    const onOpenClient = () => setShowAddClient(true)
     const onOpenTask = () => setShowAddTask(true)
     const onOpenOrder = () => setShowAddOrder(true)
+
+    window.addEventListener("open-add-client", onOpenClient as EventListener)
     window.addEventListener("open-add-task", onOpenTask as EventListener)
     window.addEventListener("open-add-order", onOpenOrder as EventListener)
+
     return () => {
+      window.removeEventListener("open-add-client", onOpenClient as EventListener)
       window.removeEventListener("open-add-task", onOpenTask as EventListener)
       window.removeEventListener("open-add-order", onOpenOrder as EventListener)
     }
   }, [])
 
-  useEffect(() => {
-    const init = async () => {
-      try {
-        const seen = typeof window !== "undefined" ? localStorage.getItem("crm:hasVisited") : "1"
-        setIsFirstVisit(!seen)
-        localStorage.setItem("crm:hasVisited", "1")
-      } catch {
-        setIsFirstVisit(false)
-      }
+  const overdueTasks = useMemo(
+    () => tasks.filter((task) => isOverdue(task.dueDate, task.completed)).sort((a, b) => (safeDate(a.dueDate)?.getTime() ?? 0) - (safeDate(b.dueDate)?.getTime() ?? 0)),
+    [tasks],
+  )
+  const completedTasks = useMemo(() => tasks.filter((task) => task.completed), [tasks])
+  const nextTasks = useMemo(
+    () =>
+      tasks
+        .filter((task) => !task.completed && !isOverdue(task.dueDate) && !isToday(task.dueDate))
+        .sort((a, b) => (safeDate(a.dueDate)?.getTime() ?? 0) - (safeDate(b.dueDate)?.getTime() ?? 0))
+        .slice(0, 5),
+    [tasks],
+  )
+  const focusQueue = useMemo(() => {
+    const seen = new Set<string>()
+    return [...overdueTasks, ...todaysTasks, ...nextTasks].filter((task) => {
+      if (seen.has(task.id)) return false
+      seen.add(task.id)
+      return true
+    }).slice(0, 6)
+  }, [nextTasks, overdueTasks, todaysTasks])
+  const attentionClients = useMemo(
+    () =>
+      clients
+        .filter((client) => {
+          const state = getClientAttentionState(client, tasks)
+          return state.label === "Follow-up overdue" || state.label === "Needs touch"
+        })
+        .sort((a, b) => (safeDate(a.lastContact)?.getTime() ?? 0) - (safeDate(b.lastContact)?.getTime() ?? 0))
+        .slice(0, 5),
+    [clients, tasks],
+  )
+  const recentTouches = useMemo(
+    () =>
+      [...clients]
+        .sort((a, b) => (safeDate(b.lastContact)?.getTime() ?? 0) - (safeDate(a.lastContact)?.getTime() ?? 0))
+        .slice(0, 5),
+    [clients],
+  )
+  const recentOrders = useMemo(
+    () => [...orders].sort((a, b) => (safeDate(b.date)?.getTime() ?? 0) - (safeDate(a.date)?.getTime() ?? 0)).slice(0, 4),
+    [orders],
+  )
+  const monthlyRevenue = useMemo(() => {
+    const now = new Date()
+    return orders
+      .filter((order) => {
+        const date = safeDate(order.date)
+        return !!date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+      })
+      .reduce((total, order) => total + order.amount, 0)
+  }, [orders])
+  const pipelineRevenue = useMemo(
+    () => orders.filter((order) => order.status === "pending" || order.status === "processing").reduce((total, order) => total + order.amount, 0),
+    [orders],
+  )
+  const activityFeed = useMemo(() => {
+    const items = [
+      ...recentTouches.map((client) => ({
+        id: `client-${client.id}`,
+        label: client.name,
+        detail: client.company || client.email,
+        timestamp: client.lastContact,
+        type: "Touchpoint",
+      })),
+      ...completedTasks.slice(0, 3).map((task) => ({
+        id: `task-${task.id}`,
+        label: task.title,
+        detail: `${formatEnumLabel(task.type)} closed`,
+        timestamp: task.dueDate,
+        type: "Task",
+      })),
+      ...recentOrders.map((order) => ({
+        id: `order-${order.id}`,
+        label: order.product,
+        detail: `$${order.amount.toFixed(0)} · ${getClientName(order.clientId, clients)}`,
+        timestamp: order.date,
+        type: "Order",
+      })),
+    ]
+    return items.sort((a, b) => (safeDate(b.timestamp)?.getTime() ?? 0) - (safeDate(a.timestamp)?.getTime() ?? 0)).slice(0, 6)
+  }, [clients, completedTasks, recentOrders, recentTouches])
 
-      try {
-        let name = ""
-        if (typeof window !== "undefined") {
-          name = localStorage.getItem("crm:userName") || ""
-        }
-        if (!name) {
-          const supabase = getSupabaseBrowserClient()
-          const { data } = await supabase.auth.getUser()
-          const meta = data?.user?.user_metadata || {}
-          const rawName = meta.full_name || meta.name || ""
-          const email = data?.user?.email || ""
-          const fallback = email ? email.split("@")[0] : ""
-          name = (rawName || fallback || "Jane").toString()
-        }
-        setUserName(name)
-      } catch {
-        // keep default
-      }
+  const activeClientsCount = clients.filter((client) => client.status === "active" || client.status === "vip").length
+  const warmClientsCount = clients.filter((client) => client.status === "lead" || client.status === "prospect").length
+  const now = new Date()
+  const todayLabel = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })
+  const workspaceLabel = isPreview ? "Preview workspace" : userName
+  const dailySummary = `${overdueTasks.length} follow-up${overdueTasks.length === 1 ? "" : "s"} overdue. ${todaysTasks.length} task${todaysTasks.length === 1 ? "" : "s"} due today.`
+  const firstName = getFirstName(userName)
+  const greeting = getTimeGreeting(now)
+  const todayHeading = firstName ? `${greeting}, ${firstName}.` : todayLabel
+  const todayDescription = firstName ? `${todayLabel}. ${dailySummary}` : `This is what you have today. ${dailySummary}`
+
+  const navigate = (key: AppNavKey) => {
+    if (key === "settings") {
+      const params = new URLSearchParams()
+      if (isPreview) params.set("preview", "1")
+      const suffix = params.toString()
+      router.push(`/dashboard/settings${suffix ? `?${suffix}` : ""}`)
+      return
     }
-    init()
-  }, [])
 
-  const stats = {
-    totalClients: clients.length,
-    activeClients: clients.filter((c) => c.status === "active").length,
-    todaysTasks: todaysTasks.length,
-    recentClients: recentClients.length,
-    totalOrders: orders.length,
-    inactiveCustomers: inactiveClients.length,
+    const nextTab = key as WorkspaceTab
+    setActive(nextTab)
+    const params = new URLSearchParams(searchParams.toString())
+    if (nextTab === "today") params.delete("tab")
+    else params.set("tab", nextTab)
+    if (isPreview) params.set("preview", "1")
+    const nextQuery = params.toString()
+    router.replace(`/dashboard${nextQuery ? `?${nextQuery}` : ""}`)
   }
 
-  return (
-    <SidebarInset>
-      {/* Top bar with navy background and white text + SidebarTrigger toggler */}
-      <div className="border-b bg-slate-900 text-white">
-        <div className="flex h-16 items-center px-4">
-          <SidebarTrigger className="-ml-1 mr-2" />
-          <div className="flex items-center space-x-3">
-            <Users className="h-6 w-6" />
-            <h1 className="text-xl font-semibold font-mono tracking-wide">AVD CLIENTIVE</h1>
-          </div>
-          <div className="ml-auto flex items-center space-x-2 md:space-x-4">
-            <div className="hidden md:flex items-center space-x-2">
-              <Switch
-                className="bg-orange-600"
-                id="order-tracking"
-                checked={settings.orderTrackingEnabled}
-                onCheckedChange={(checked) => updateSettings({ orderTrackingEnabled: checked })}
-              />
-              <Label htmlFor="order-tracking" className="text-sm font-sans text-white">
-                Order Tracking
-              </Label>
+  if (loading && !isPreview) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="page-shell grid min-h-screen place-items-center py-16">
+          <Card className="card-primary w-full max-w-lg">
+            <div className="space-y-3 p-8 text-center">
+              <p className="section-label m-0 mx-auto">Loading</p>
+              <h1 className="font-sans text-2xl font-semibold tracking-[-0.04em]">Preparing your CLIENTIVE workspace</h1>
+              <p className="text-sm leading-6 text-muted-foreground">Restoring your queue, relationships, and workspace modules.</p>
             </div>
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-white/70" />
-              <Input
-                placeholder="Search clients..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 w-[200px] sm:w-[240px] md:w-[300px] bg-slate-800 border-white/20 text-white placeholder:text-white/70"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilter(true)}
-              className="border-white/30 hover:bg-white/10 text-black bg-white"
-            >
-              <Filter className="h-4 w-4 mr-2" /> Filter
-            </Button>
-            {/* Explicit mobile menu trigger for visibility */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="sm:hidden text-white hover:bg-white/10"
-              onClick={toggleSidebar}
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowImportClients(true)}
-              className="border-white/30 text-white hover:bg-white/10 bg-black"
-            >
-              <Upload className="h-4 w-4 mr-2" /> Import
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowExport(true)}
-              className="border-white/30 hover:bg-white/10 text-black"
-            >
-              <Download className="h-4 w-4 mr-2" /> Export
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={signOut}
-              title="Sign out"
-              className="text-white hover:bg-white/10"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          </Card>
         </div>
       </div>
+    )
+  }
 
-      <main className="flex-1 space-y-4 p-4 pt-6">
-        {/* Overview greeting */}
-        <div id="overview" className="rounded-lg border bg-gradient-to-r from-orange-50 to-slate-50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="min-w-0">
-              <h2 className="text-lg font-semibold tracking-tight truncate">
-                {isFirstVisit ? `Hi ${userName}` : `Welcome back, ${userName}`}
-              </h2>
-              <p className="text-sm text-muted-foreground">{"Here's what's happening today."}</p>
-            </div>
-            <span className="hidden sm:block text-xs md:text-sm text-muted-foreground">
-              {new Date().toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
-            </span>
-          </div>
-        </div>
+  const status =
+    active === "clients" ? (
+      <p>{attentionClients.length} relationships need attention.</p>
+    ) : active === "tasks" ? (
+      <p>{overdueTasks.length} overdue, {todaysTasks.length} due today.</p>
+    ) : active === "orders" ? (
+      <p>
+        {settings.orderTrackingEnabled ? `${orders.length} tracked orders. $${monthlyRevenue.toFixed(0)} booked this month.` : "Orders are optional and currently off."}
+      </p>
+    ) : (
+      <p>{activeClientsCount} active clients. {warmClientsCount} warm leads still in motion.</p>
+    )
 
-        {/* Metrics */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
-              <div className="h-9 w-9 rounded-md bg-slate-900 text-white grid place-items-center">
-                <Users className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalClients}</div>
-              <p className="text-xs text-muted-foreground">{stats.activeClients} active</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Tasks</CardTitle>
-              <div className="h-9 w-9 rounded-md bg-slate-900 text-white grid place-items-center">
-                <Clock className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todaysTasks}</div>
-              <p className="text-xs text-muted-foreground">{upcomingTasks.length} upcoming</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Recent Clients</CardTitle>
-              <div className="h-9 w-9 rounded-md bg-slate-900 text-white grid place-items-center">
-                <Calendar className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.recentClients}</div>
-              <p className="text-xs text-muted-foreground">Added this week</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-white">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inactive Customers</CardTitle>
-              <div className="h-9 w-9 rounded-md bg-orange-500 text-white grid place-items-center">
-                <Bell className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.inactiveCustomers}</div>
-              <p className="text-xs text-muted-foreground">No order in 30+ days</p>
-            </CardContent>
-          </Card>
-        </div>
+  const actions =
+    active === "clients" ? (
+      <>
+        <Button variant="outline" onClick={() => setShowImportClients(true)}>
+          Import
+        </Button>
+        <Button onClick={() => setShowAddClient(true)}>
+          <UserPlus className="h-4 w-4" />
+          New client
+        </Button>
+      </>
+    ) : active === "tasks" ? (
+      <>
+        <Button variant="outline" onClick={() => setShowExport(true)}>
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+        <Button onClick={() => setShowAddTask(true)}>
+          <Plus className="h-4 w-4" />
+          Add task
+        </Button>
+      </>
+    ) : active === "orders" ? (
+      settings.orderTrackingEnabled ? (
+        <>
+          <Button variant="outline" onClick={() => setShowExport(true)}>
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={() => setShowAddOrder(true)}>
+            <Plus className="h-4 w-4" />
+            Add order
+          </Button>
+        </>
+      ) : (
+        <Button onClick={() => navigate("settings")}>
+          Enable orders
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      )
+    ) : (
+      <>
+        <Button variant="outline" onClick={() => setShowExport(true)}>
+          <Download className="h-4 w-4" />
+          Export
+        </Button>
+        <Button variant="outline" onClick={() => setShowAddClient(true)}>
+          <UserPlus className="h-4 w-4" />
+          New client
+        </Button>
+        <Button onClick={() => setShowAddTask(true)}>
+          <Plus className="h-4 w-4" />
+          Add task
+        </Button>
+      </>
+    )
 
-        {/* Divider */}
-        <div className="relative my-2">
-          <div className="h-px w-full bg-muted" />
-        </div>
+  return (
+    <>
+      <AppChrome
+        active={active}
+        onNavigate={navigate}
+        sectionLabel={active === "today" ? todayLabel : workspaceLabel}
+        title={
+          active === "today"
+            ? todayHeading
+            : active === "clients"
+              ? "Clients"
+              : active === "tasks"
+                ? "Tasks"
+                : "Orders"
+        }
+        description={
+          active === "today"
+            ? todayDescription
+            : active === "clients"
+              ? "The relationship view for last contact, next action, and the context that matters before you reach out."
+              : active === "tasks"
+                ? "A calm execution queue for overdue, due-today, and upcoming follow-ups."
+                : "Optional order visibility tied back to the same client record."
+        }
+        userName={userName}
+        userEmail={userEmail}
+        isPreview={isPreview}
+        status={status}
+        actions={actions}
+      >
+        {active === "today" ? (
+          <div className="space-y-6">
+            <MetricsGrid>
+              <MetricTile icon={CircleAlert} label="Overdue" value={overdueTasks.length} detail="Needs attention first" tone="danger" />
+              <MetricTile icon={CalendarClock} label="Today" value={todaysTasks.length} detail="Due in the current day" tone="brand" />
+              <MetricTile icon={Users} label="Active clients" value={activeClientsCount} detail={`${warmClientsCount} warm leads in motion`} />
+              <MetricTile
+                icon={Package2}
+                label={settings.orderTrackingEnabled ? "Revenue pulse" : "Orders module"}
+                value={settings.orderTrackingEnabled ? `$${monthlyRevenue.toFixed(0)}` : "Off"}
+                detail={settings.orderTrackingEnabled ? "Booked this month" : "Enable only when needed"}
+              />
+            </MetricsGrid>
 
-        {/* Today + Recent */}
-        <section aria-label="Today and Recent" className="grid gap-4 md:grid-cols-2">
-          <RecentActivity clients={clients} tasks={tasks} orders={orders} userName={userName} />
-        </section>
-
-        <div className="grid gap-4">
-          <div>
-            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)} className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <TabsList className="w-full sm:w-auto">
-                  <TabsTrigger value="clients" className="flex-1 sm:flex-none">
-                    Clients
-                  </TabsTrigger>
-                  <TabsTrigger value="tasks" className="flex-1 sm:flex-none">
-                    Tasks & Follow-ups
-                  </TabsTrigger>
-                  <TabsTrigger value="orders" className="flex-1 sm:flex-none">
-                    Orders
-                  </TabsTrigger>
-                </TabsList>
-                <div className="flex flex-wrap gap-2">
-                  {tab === "clients" && (
-                    <>
-                      <Button variant="outline" onClick={() => setShowImportClients(true)}>
-                        <Upload className="h-4 w-4 mr-2" />
-                        Import
-                      </Button>
-                      <Button onClick={() => setShowAddClient(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Client
-                      </Button>
-                    </>
-                  )}
-                  {tab === "tasks" && (
-                    <Button onClick={() => setShowAddTask(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Task
-                    </Button>
-                  )}
-                  {tab === "orders" && (
-                    <Button onClick={() => setShowAddOrder(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Order
-                    </Button>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+              <Card className="card-primary overflow-hidden">
+                <div className="border-b border-border px-5 py-4">
+                  <p className="ui-kicker">Focus queue</p>
+                  <h2 className="mt-1 font-sans text-lg font-semibold text-foreground">Focus queue</h2>
+                </div>
+                <div className="space-y-2 p-3">
+                  {focusQueue.length > 0 ? (
+                    focusQueue.map((task) => {
+                      const client = clients.find((entry) => entry.id === task.clientId)
+                      return (
+                        <div key={task.id} className="border-b border-border/80 px-1 py-4 last:border-b-0">
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium text-foreground">{task.title}</p>
+                                <Badge className={isOverdue(task.dueDate, task.completed) ? "border-transparent bg-destructive/10 text-destructive" : isToday(task.dueDate) ? "border-transparent bg-primary/10 text-primary" : "border-border/80 bg-[hsl(var(--surface-soft))] text-muted-foreground"}>
+                                  {isOverdue(task.dueDate, task.completed) ? "Overdue" : isToday(task.dueDate) ? "Today" : "Upcoming"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm leading-6 text-muted-foreground">
+                                {client ? `${client.name}${client.company ? ` · ${client.company}` : ""}` : "Client not found"} · {formatEnumLabel(task.type)} · {formatDateShort(task.dueDate)} at {formatTimeHM(task.dueDate)}
+                              </p>
+                              {task.description ? <p className="text-sm text-foreground/75">{task.description}</p> : null}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {client?.phone ? (
+                                <Button size="sm" variant="outline" onClick={() => openWhatsApp(client)}>
+                                  <MessageCircle className="h-4 w-4" />
+                                  Message
+                                </Button>
+                              ) : null}
+                              {client?.phone ? (
+                                <Button size="sm" variant="outline" onClick={() => callClient(client)}>
+                                  <PhoneCall className="h-4 w-4" />
+                                  Call
+                                </Button>
+                              ) : null}
+                              {client ? (
+                                <Button size="sm" variant="outline" onClick={() => emailClient(client)}>
+                                  <Mail className="h-4 w-4" />
+                                  Email
+                                </Button>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <EmptyState
+                      title="No urgent queue"
+                      body="Your follow-up queue is clear. Add the next task now so tomorrow starts with the same calm."
+                      actionLabel="Add task"
+                      onAction={() => setShowAddTask(true)}
+                    />
                   )}
                 </div>
-              </div>
+              </Card>
 
-              <TabsContent value="clients" className="space-y-4">
-                <ClientList clients={filteredClients} orderTrackingEnabled={true} />
-              </TabsContent>
+              <aside className="space-y-5 border-t border-border pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+                <section className="space-y-3">
+                  <div>
+                    <p className="ui-kicker">Clients needing attention</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Relationships that need a touch next.</p>
+                  </div>
+                  {attentionClients.length > 0 ? (
+                    attentionClients.map((client) => {
+                      const attention = getClientAttentionState(client, tasks)
+                      return (
+                        <div key={client.id} className="border-t border-border py-4 first:border-t-0">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="font-medium text-foreground">{client.name}</p>
+                              <p className="ui-meta mt-1">{client.company || client.email}</p>
+                              <p className="ui-meta mt-2">Last contact {timeAgo(client.lastContact)}</p>
+                            </div>
+                            <span className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${attention.tone}`}>{attention.label}</span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <EmptyState
+                      title="Relationships are warm"
+                      body="No client relationships are past the attention threshold right now."
+                      actionLabel="Open client book"
+                      onAction={() => navigate("clients")}
+                    />
+                  )}
+                </section>
 
-              <TabsContent value="tasks" className="space-y-4">
-                <TaskList tasks={tasks} clients={clients} />
-              </TabsContent>
+                <section className="space-y-3 border-t border-border pt-5">
+                  <div>
+                    <p className="ui-kicker">Next 7 days</p>
+                    <p className="mt-1 text-sm text-muted-foreground">What is already planned.</p>
+                  </div>
+                  {nextTasks.length > 0 ? (
+                    nextTasks.map((task) => (
+                      <div key={task.id} className="border-t border-border py-4 first:border-t-0">
+                        <p className="font-medium text-foreground">{task.title}</p>
+                        <p className="ui-meta mt-1">{getClientName(task.clientId, clients)} · {formatEnumLabel(task.type)}</p>
+                        <p className="ui-meta mt-2">{formatDateShort(task.dueDate)} at {formatTimeHM(task.dueDate)}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="No upcoming work queued"
+                      body="Create the next follow-up before you leave today so tomorrow starts with a plan."
+                      actionLabel="Plan next task"
+                      onAction={() => setShowAddTask(true)}
+                    />
+                  )}
+                </section>
 
-              <TabsContent value="orders" className="space-y-4">
-                <OrderList orders={orders} clients={clients} />
-              </TabsContent>
-            </Tabs>
+                <section className="space-y-3 border-t border-border pt-5">
+                  <div>
+                    <p className="ui-kicker">Recent activity</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Movement across the workspace.</p>
+                  </div>
+                  {activityFeed.map((item) => (
+                    <div key={item.id} className="border-t border-border py-4 first:border-t-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-foreground">{item.label}</p>
+                        <span className="ui-meta">{item.type}</span>
+                      </div>
+                      <p className="ui-meta mt-1">{item.detail}</p>
+                      <p className="ui-meta mt-2">{timeAgo(item.timestamp)}</p>
+                    </div>
+                  ))}
+                </section>
+
+                <section className="space-y-3 border-t border-border pt-5">
+                  <div>
+                    <p className="ui-kicker">Order pulse</p>
+                    <p className="mt-1 text-sm text-muted-foreground">Optional business visibility.</p>
+                  </div>
+                  {settings.orderTrackingEnabled ? (
+                    <>
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                        <div>
+                          <p className="ui-kicker">Booked this month</p>
+                          <p className="mt-2 text-xl font-semibold text-foreground">${monthlyRevenue.toFixed(0)}</p>
+                        </div>
+                        <div>
+                          <p className="ui-kicker">Pipeline</p>
+                          <p className="mt-2 text-xl font-semibold text-foreground">${pipelineRevenue.toFixed(0)}</p>
+                        </div>
+                      </div>
+                      <div className="border-t border-border pt-4">
+                        {recentOrders.map((order) => (
+                          <div key={order.id} className="border-t border-border py-3 first:border-t-0">
+                            <p className="text-sm font-medium text-foreground">{order.product}</p>
+                            <p className="ui-meta mt-1">{getClientName(order.clientId, clients)} · ${order.amount.toFixed(0)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : (
+                    <EmptyState
+                      title="Orders stay optional"
+                      body="Turn them on only when you need revenue visibility or purchase history."
+                      actionLabel="Open settings"
+                      onAction={() => navigate("settings")}
+                    />
+                  )}
+                </section>
+              </aside>
+            </div>
           </div>
-        </div>
-      </main>
+        ) : active === "clients" ? (
+          <div className="space-y-5">
+            <MetricsGrid>
+              <MetricTile icon={Users} label="Total clients" value={clients.length} detail={`${activeClientsCount} active or VIP`} />
+              <MetricTile icon={UserPlus} label="Added recently" value={recentClients.length} detail="Touched in the last 7 days" tone="brand" />
+              <MetricTile icon={BellDot} label="Needs attention" value={attentionClients.length} detail="Needs a touch or overdue task" tone="danger" />
+              <MetricTile icon={Package2} label="Order history" value={settings.orderTrackingEnabled ? "On" : "Off"} detail={settings.orderTrackingEnabled ? "Visible inside client records" : "Still optional"} />
+            </MetricsGrid>
+            <ClientList clients={clients} orderTrackingEnabled={settings.orderTrackingEnabled} />
+          </div>
+        ) : active === "tasks" ? (
+          <div className="space-y-5">
+            <MetricsGrid>
+              <MetricTile icon={CircleAlert} label="Overdue" value={overdueTasks.length} detail="Past due and blocking flow" tone="danger" />
+              <MetricTile icon={CalendarClock} label="Due today" value={todaysTasks.length} detail="Commitments for the day" tone="brand" />
+              <MetricTile icon={ListTodo} label="Upcoming" value={upcomingTasks.length} detail="Scheduled in the next 7 days" />
+              <MetricTile icon={CheckCircle2} label="Completed" value={completedTasks.length} detail="Still visible for record" />
+            </MetricsGrid>
+            <TaskList tasks={tasks} clients={clients} />
+          </div>
+        ) : settings.orderTrackingEnabled ? (
+          <div className="space-y-5">
+            <MetricsGrid>
+              <MetricTile icon={Package2} label="Tracked orders" value={orders.length} detail="Across the workspace" />
+              <MetricTile icon={TrendingUp} label="Booked this month" value={`$${monthlyRevenue.toFixed(0)}`} detail="Recognized from tracked orders" tone="brand" />
+              <MetricTile icon={BellDot} label="Inactive clients" value={inactiveClients.length} detail="No order in the last 30 days" tone="danger" />
+              <MetricTile icon={Package2} label="Pipeline" value={`$${pipelineRevenue.toFixed(0)}`} detail="Pending and processing" />
+            </MetricsGrid>
+            <OrderList orders={orders} clients={clients} />
+          </div>
+        ) : (
+          <Card className="card-primary">
+            <div className="grid gap-5 p-8 lg:grid-cols-[0.7fr_0.3fr] lg:items-center">
+              <div className="space-y-3">
+                <p className="section-label m-0">Optional module</p>
+                <h2 className="font-sans text-3xl font-semibold tracking-[-0.04em] text-foreground">Orders are currently turned off.</h2>
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                  CLIENTIVE can stay focused on client relationships and follow-ups until you actively need order history or revenue visibility.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2 lg:justify-end">
+                <Button variant="outline" asChild>
+                  <Link href={isPreview ? "/dashboard/settings?preview=1" : "/dashboard/settings"}>Open settings</Link>
+                </Button>
+                <Button onClick={() => navigate("today")}>
+                  Back to today
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </Card>
+        )}
+      </AppChrome>
 
-      {/* Dialogs */}
       <AddClientDialog open={showAddClient} onOpenChange={setShowAddClient} />
       <ImportDialog open={showImportClients} onOpenChange={setShowImportClients} />
       <AddTaskDialog open={showAddTask} onOpenChange={setShowAddTask} clients={clients} />
       <AddOrderDialog open={showAddOrder} onOpenChange={setShowAddOrder} clients={clients} />
-      <ExportDialog
-        open={showExport}
-        onOpenChange={setShowExport}
-        clients={clients}
-        orders={orders}
-        orderTrackingEnabled={true}
-      />
-      <FilterDialog
-        open={showFilter}
-        onOpenChange={setShowFilter}
-        onFilter={filterClients}
-        orderTrackingEnabled={true}
-      />
-    </SidebarInset>
+      <ExportDialog open={showExport} onOpenChange={setShowExport} clients={clients} orders={orders} orderTrackingEnabled={settings.orderTrackingEnabled} />
+    </>
   )
 }
 
-export default function DashboardPage() {
-  const router = useRouter()
-
-  // Sidebar-controlled navigation state
-  const [active, setActive] = useState<NavKey>(() => {
-    if (typeof window !== "undefined") {
-      const sp = new URLSearchParams(window.location.search)
-      const t = sp.get("tab") as NavKey | null
-      if (t === "clients" || t === "tasks" || t === "orders") return t
-    }
-    return "clients"
-  })
-  const tab = active === "overview" || active === "settings" ? "clients" : (active as "clients" | "tasks" | "orders")
-
-  const handleNavigate = (key: NavKey) => {
-    setActive(key)
-    if (key === "overview") {
-      if (typeof window !== "undefined") {
-        const el = document.getElementById("overview")
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
-        else window.scrollTo({ top: 0, behavior: "smooth" })
-      }
-      return
-    }
-    if (key === "settings") {
-      router.push("/dashboard/settings")
-      return
-    }
-    // for clients/tasks/orders, also update the URL tab param for direct linking
-    if (typeof window !== "undefined") {
-      const url = new URL(window.location.href)
-      url.searchParams.set("tab", key)
-      window.history.replaceState(null, "", url.toString())
-    }
-  }
-
-  // Enforce auth in production
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const supabase = getSupabaseBrowserClient()
-        const { data, error } = await supabase.auth.getUser()
-        if (error || !data?.user) {
-          router.replace("/auth/sign-in")
-        }
-      } catch {
-        router.replace("/auth/sign-in")
-      }
-    }
-    check()
-  }, [router])
+function MetricTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = "default",
+}: {
+  icon: ComponentType<{ className?: string }>
+  label: string
+  value: string | number
+  detail: string
+  tone?: "default" | "brand" | "danger"
+}) {
+  const badgeTone =
+    tone === "brand" ? "bg-primary/10 text-primary" : tone === "danger" ? "bg-destructive/10 text-destructive" : "bg-[hsl(var(--surface-soft))] text-foreground"
 
   return (
-    <SidebarProvider>
-      <AppSidebar active={active} onNavigate={handleNavigate} />
-      <SettingsProvider>
-        <OrdersProvider>
-          <TasksProvider>
-            <ClientsProvider>
-              <DashboardInner tab={tab} setTab={(t) => setActive(t)} />
-            </ClientsProvider>
-          </TasksProvider>
-        </OrdersProvider>
-      </SettingsProvider>
-    </SidebarProvider>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className={`h-4 w-4 ${tone === "brand" ? "text-primary" : tone === "danger" ? "text-destructive" : "text-muted-foreground"}`} />
+        <p className="ui-kicker">{label}</p>
+      </div>
+      <p className="font-sans text-3xl font-semibold tracking-[-0.05em] text-foreground">{value}</p>
+      <p className="ui-meta">{detail}</p>
+    </div>
+  )
+}
+
+function MetricsGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="grid gap-5 border-y border-border py-4 sm:grid-cols-2 xl:grid-cols-4">
+      {children}
+    </div>
+  )
+}
+
+function EmptyState({
+  title,
+  body,
+  actionLabel,
+  onAction,
+}: {
+  title: string
+  body: string
+  actionLabel: string
+  onAction: () => void
+}) {
+  return (
+    <div className="border border-dashed border-border px-4 py-4">
+      <h3 className="font-sans text-base font-semibold text-foreground">{title}</h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{body}</p>
+      <Button className="mt-4" onClick={onAction}>
+        {actionLabel}
+      </Button>
+    </div>
+  )
+}
+
+function getClientName(clientId: string, clients: Client[]) {
+  return clients.find((client) => client.id === clientId)?.name || "Unknown client"
+}
+
+export default function DashboardPage() {
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const [active, setActive] = useState<WorkspaceTab>(() => parseTab(tabParam))
+
+  useEffect(() => {
+    setActive(parseTab(tabParam))
+  }, [tabParam])
+
+  return (
+    <SettingsProvider>
+      <OrdersProvider>
+        <TasksProvider>
+          <ClientsProvider>
+            <DashboardWorkspace active={active} setActive={setActive} />
+          </ClientsProvider>
+        </TasksProvider>
+      </OrdersProvider>
+    </SettingsProvider>
   )
 }
