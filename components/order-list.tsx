@@ -73,19 +73,19 @@ export function OrderList({ orders, clients }: OrderListProps) {
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_348px]">
         <div className="overflow-hidden border-t border-border">
-          <div className="border-b border-border px-5 py-4">
+          <div className="border-b border-border px-6 py-5">
             <p className="ui-kicker">Order ledger</p>
             <h2 className="mt-1 font-sans text-lg font-semibold text-foreground">Lean visibility into revenue-moving work</h2>
           </div>
-          <div className="p-2">
+          <div className="p-3">
             {sortedOrders.map((order) => {
               const client = clients.find((item) => item.id === order.clientId)
               const isSelected = selectedOrder?.id === order.id
               return (
                 <div key={order.id} className={`${isSelected ? "bg-[hsl(var(--surface-soft))/0.28]" : "bg-transparent"} border-b border-border/80 last:border-b-0`}>
-                  <div className="flex items-start gap-3 px-3 py-4">
+                  <div className="flex items-start gap-4 px-4 py-5">
                     <button
                       type="button"
                       onClick={() => setSelectedOrderId(order.id)}
@@ -127,10 +127,10 @@ export function OrderList({ orders, clients }: OrderListProps) {
           </div>
         </div>
 
-        <aside className="border-t border-border pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+        <aside className="border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
           {selectedOrder ? (
-            <div className="space-y-5">
-              <div className="space-y-3">
+            <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="ui-kicker">Selected order</p>
@@ -143,20 +143,20 @@ export function OrderList({ orders, clients }: OrderListProps) {
                 </p>
               </div>
 
-              <div className="grid gap-4">
-                <div className="border-t border-border pt-3">
+              <div className="grid gap-5">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Value</p>
                   <p className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <DollarSign className="h-4 w-4 text-primary" />
                     {selectedOrder.amount.toFixed(2)}
                   </p>
                 </div>
-                <div className="border-t border-border pt-3">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Timeline</p>
                   <p className="mt-2 text-sm font-medium text-foreground">{formatDateShort(selectedOrder.date)}</p>
                   <p className="ui-meta mt-1">Tracked from the date the work or sale was recorded.</p>
                 </div>
-                <div className="border-t border-border pt-3">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Linked client</p>
                   <p className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
                     <UserCircle2 className="h-4 w-4 text-primary" />
@@ -166,7 +166,7 @@ export function OrderList({ orders, clients }: OrderListProps) {
                 </div>
               </div>
 
-              <div className="space-y-3 border-t border-border pt-4">
+              <div className="space-y-3 border-t border-border pt-5">
                 <p className="ui-kicker">Related tasks</p>
                 {relatedTasks.length > 0 ? (
                   <div className="space-y-2">

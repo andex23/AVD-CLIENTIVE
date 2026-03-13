@@ -44,10 +44,10 @@ export function AppSidebar({
 } & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar side="left" variant="floating" collapsible="icon" {...props}>
-      <SidebarHeader className="gap-3 px-2.5 py-3.5">
-        <Link href="/" className="flex items-center gap-3 px-1 py-1 transition-colors hover:text-sidebar-foreground">
+      <SidebarHeader className="gap-2.5 px-3.5 py-4">
+        <Link href="/" className="flex w-full items-center gap-2 px-1 py-1 transition-colors hover:text-sidebar-foreground">
           <BrandMark className="h-9 w-9 shrink-0 rounded-[14px]" />
-          <BrandWordmark className="min-w-0 text-sm tracking-[0.18em] text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
+          <BrandWordmark className="text-[0.72rem] tracking-[0.06em] text-sidebar-foreground group-data-[collapsible=icon]:hidden" />
         </Link>
       </SidebarHeader>
       <SidebarSeparator />
@@ -85,7 +85,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="px-2.5 pb-3.5">
+      <SidebarFooter className="px-3.5 pb-4">
         <div className="border-t border-sidebar-border/80 pt-3 group-data-[collapsible=icon]:hidden">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/42">Public pages</p>
           <div className="mt-3 flex flex-wrap gap-2">

@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { getDashboardPath } from "@/lib/dashboard-routes"
 
 type Props = {
   error: Error & { digest?: string }
@@ -39,7 +40,7 @@ export default function DashboardError({ error, reset }: Props) {
           <ul className="list-disc pl-5 space-y-1 text-sm">
             <li>Click “Retry” to attempt loading the dashboard again.</li>
             <li>Refresh the page if the issue persists.</li>
-            <li>If you’re using the demo, you can also open /dashboard?preview=1 to bypass auth.</li>
+            <li>If you’re using the demo, you can also open {getDashboardPath("today", true)} to bypass auth.</li>
           </ul>
           <div className="flex gap-2">
             <Button onClick={reset}>Retry</Button>

@@ -20,6 +20,7 @@ import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { useTasks } from "@/hooks/use-tasks"
 import { buildICSCalendar, buildICSEvent, downloadICS, googleCalendarUrl } from "@/lib/calendar"
 import { formatDateShort, formatTimeHM, isOverdue, isToday, safeDate } from "@/lib/date"
+import { getDashboardPath } from "@/lib/dashboard-routes"
 import { cn } from "@/lib/utils"
 import { formatEnumLabel, getTaskPriorityTone, getTaskTypeTone, getTaskUrgencyTone } from "@/lib/workspace-ui"
 import type { Client } from "@/types/client"
@@ -28,6 +29,7 @@ import type { Task } from "@/types/task"
 interface TaskListProps {
   tasks: Task[]
   clients: Client[]
+  isPreview?: boolean
 }
 
 type TaskFilter = "all" | "follow-up" | "call" | "email" | "meeting"
@@ -40,7 +42,7 @@ const FILTERS: Array<{ key: TaskFilter; label: string }> = [
   { key: "meeting", label: "Meetings" },
 ]
 
-export function TaskList({ tasks, clients }: TaskListProps) {
+export function TaskList({ tasks, clients, isPreview = false }: TaskListProps) {
   const { toggleTask } = useTasks()
   const [activeFilter, setActiveFilter] = useState<TaskFilter>("all")
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -129,9 +131,7 @@ export function TaskList({ tasks, clients }: TaskListProps) {
 
   const openLinkedClient = () => {
     if (!selectedTask) return
-    const params = new URLSearchParams(window.location.search)
-    params.set("tab", "clients")
-    window.location.assign(`/dashboard?${params.toString()}`)
+    window.location.assign(getDashboardPath("clients", isPreview))
   }
 
   if (tasks.length === 0) {
@@ -163,9 +163,9 @@ export function TaskList({ tasks, clients }: TaskListProps) {
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden border-t border-border">
-          <div className="border-b border-border px-5 py-4">
+          <div className="border-b border-border px-6 py-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
                 <p className="ui-kicker">Execution queue</p>
@@ -195,7 +195,7 @@ export function TaskList({ tasks, clients }: TaskListProps) {
             </div>
           </div>
 
-          <div className="space-y-5 p-4">
+          <div className="space-y-6 p-5">
             <TaskGroup
               title="Overdue"
               caption="Past the due time and should move first."
@@ -243,10 +243,10 @@ export function TaskList({ tasks, clients }: TaskListProps) {
           </div>
         </div>
 
-        <aside className="border-t border-border pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+        <aside className="border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
           {selectedTask ? (
-            <div className="space-y-5">
-              <div className="space-y-3">
+            <div className="space-y-6">
+              <div className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="ui-kicker">Selected task</p>
@@ -265,32 +265,32 @@ export function TaskList({ tasks, clients }: TaskListProps) {
                 </div>
               </div>
 
-              <div className="grid gap-4">
-                <div className="border-t border-border pt-3">
+              <div className="grid gap-5">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Due</p>
                   <p className="mt-2 text-sm font-medium text-foreground">
                     {formatDateShort(selectedTask.dueDate)} at {formatTimeHM(selectedTask.dueDate)}
                   </p>
                 </div>
-                <div className="border-t border-border pt-3">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Linked client</p>
                   <p className="mt-2 text-sm font-medium text-foreground">{selectedClient?.name || "Unknown client"}</p>
                   <p className="ui-meta mt-1">{selectedClient?.company || selectedClient?.email || "No relationship context is attached."}</p>
                 </div>
-                <div className="border-t border-border pt-3">
+                <div className="border-t border-border pt-4">
                   <p className="ui-kicker">Reminder behavior</p>
                   <p className="mt-2 text-sm text-foreground">{selectedTask.emailNotify ? "Email reminder enabled" : "App-only reminder"}</p>
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-border pt-4">
+              <div className="space-y-2.5 border-t border-border pt-5">
                 <p className="ui-kicker">Context</p>
                 <p className="text-sm leading-6 text-muted-foreground">
                   {selectedTask.description || "Add a short note so this task is easy to complete when it comes back into view."}
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <Button className="w-full" onClick={() => toggleTask(selectedTask.id)}>
                   {selectedTask.completed ? (
                     <>
@@ -368,7 +368,7 @@ function TaskGroup({
   onToggle: (id: string) => void
 }) {
   return (
-    <section className="space-y-3">
+    <section className="space-y-3.5">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h3 className="font-sans text-sm font-semibold text-foreground">{title}</h3>
@@ -385,7 +385,7 @@ function TaskGroup({
 
             return (
               <div key={task.id} className={cn("border-b border-border/80 transition-colors last:border-b-0", isSelected ? "bg-[hsl(var(--surface-soft))/0.28]" : "bg-transparent")}>
-                <div className="flex items-start gap-3 px-2 py-4">
+                <div className="flex items-start gap-4 px-3 py-5">
                   <Checkbox checked={task.completed} onCheckedChange={() => onToggle(task.id)} className="mt-1" />
                   <button
                     type="button"
@@ -432,7 +432,7 @@ function TaskGroup({
           })}
         </div>
       ) : (
-        <div className="border border-dashed border-border p-4">
+        <div className="border border-dashed border-border p-5">
           <p className="text-sm text-muted-foreground">Nothing in this section right now.</p>
         </div>
       )}

@@ -20,7 +20,12 @@ export function BrandMark({ className }: { className?: string }) {
 
 export function BrandWordmark({ className }: { className?: string }) {
   return (
-    <span className={cn("font-mono text-base font-semibold uppercase tracking-[0.28em] text-foreground", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center whitespace-nowrap font-mono text-base font-semibold uppercase leading-none tracking-[0.16em] text-foreground",
+        className,
+      )}
+    >
       AVD-CLIENTIVE
     </span>
   )

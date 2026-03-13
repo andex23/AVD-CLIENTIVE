@@ -164,9 +164,9 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
 
   return (
     <>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden border-t border-border">
-          <div className="border-b border-border px-5 py-4">
+          <div className="border-b border-border px-6 py-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
                 <p className="ui-kicker">Relationship center</p>
@@ -208,7 +208,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
             </div>
           </div>
 
-          <div className="p-2">
+          <div className="p-3">
             {visibleClients.length > 0 ? (
               visibleClients.map((client) => {
                 const nextTask = nextTaskByClient.get(client.id)
@@ -223,7 +223,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                       isSelected ? "bg-[hsl(var(--surface-soft))/0.3]" : "bg-transparent",
                     )}
                   >
-                    <div className="flex items-start gap-3 px-3 py-4">
+                    <div className="flex items-start gap-4 px-4 py-5">
                       <button
                         type="button"
                         onClick={() => setSelectedClientId(client.id)}
@@ -264,7 +264,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                         </div>
 
                         <div className="flex justify-start lg:justify-end">
-                          <span className={cn("rounded-full border px-2.5 py-1 text-[11px] font-medium", attention.tone)}>{attention.label}</span>
+                          <span className={cn("rounded-full border px-3 py-1.5 text-[11px] font-medium", attention.tone)}>{attention.label}</span>
                         </div>
                       </button>
 
@@ -298,10 +298,10 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
           </div>
         </div>
 
-        <aside className="border-t border-border pt-5 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+        <aside className="border-t border-border pt-6 xl:border-l xl:border-t-0 xl:pl-8 xl:pt-0">
           {selectedClient ? (
-            <div className="space-y-5">
-              <div className="space-y-4">
+            <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="ui-kicker">Selected client</p>
@@ -331,7 +331,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                 </div>
               </div>
 
-              <div className="space-y-5 border-t border-border pt-4">
+              <div className="space-y-6 border-t border-border pt-5">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <CalendarClock className="h-4 w-4 text-primary" />
@@ -346,7 +346,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                   </p>
                 </div>
 
-                <div className="grid gap-4 border-t border-border pt-4 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="grid gap-5 border-t border-border pt-5 sm:grid-cols-2 xl:grid-cols-1">
                   <div>
                     <p className="ui-kicker">Contact</p>
                     <div className="mt-2 space-y-1.5 text-sm text-foreground">
@@ -370,14 +370,14 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t border-border pt-4">
+                <div className="space-y-2.5 border-t border-border pt-5">
                   <p className="ui-kicker">Relationship notes</p>
                   <p className="text-sm leading-6 text-muted-foreground">
                     {selectedClient.notes || "Keep a short working note here so the next touchpoint starts with context."}
                   </p>
                 </div>
 
-                <div className="space-y-3 border-t border-border pt-4">
+                <div className="space-y-3 border-t border-border pt-5">
                   <div className="flex items-center justify-between gap-2">
                     <p className="ui-kicker">Open tasks</p>
                     <span className="ui-meta">{selectedClientTasks.filter((task) => !task.completed).length} active</span>
@@ -397,7 +397,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                   </div>
                 </div>
 
-                <div className="space-y-3 border-t border-border pt-4">
+                <div className="space-y-3 border-t border-border pt-5">
                   <p className="ui-kicker">Recent touchpoints</p>
                   <div className="space-y-2">
                     {(selectedClient.interactions || []).slice(0, 3).map((interaction) => (
@@ -414,7 +414,7 @@ export function ClientList({ clients, orderTrackingEnabled }: ClientListProps) {
                 </div>
 
                 {orderTrackingEnabled ? (
-                  <div className="space-y-3 border-t border-border pt-4">
+                  <div className="space-y-3 border-t border-border pt-5">
                     <div className="flex items-center gap-2">
                       <Package2 className="h-4 w-4 text-primary" />
                       <p className="ui-kicker">Linked orders</p>
